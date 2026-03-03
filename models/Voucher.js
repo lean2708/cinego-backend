@@ -26,12 +26,12 @@ const Voucher = sequelize.define('Voucher', {
         },
     },
     type: {
-        type: DataTypes.ENUM('percent', 'cash'),
+        type: DataTypes.ENUM('PERCENT', 'CASH'),
         allowNull: false,
         validate: {
             notNull: { msg: 'Loại voucher không được để trống' },
             isIn: {
-                args: [['percent', 'cash']],
+                args: [['PERCENT', 'CASH']],
                 msg: 'Loại voucher phải là "percent" hoặc "cash"',
             },
         },

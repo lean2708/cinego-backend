@@ -22,13 +22,13 @@ const ShowtimeSeat = sequelize.define('ShowtimeSeat', {
         },
     },
     status: {
-        type: DataTypes.ENUM('available', 'holding', 'booked'),
+        type: DataTypes.ENUM('AVAILABLE', 'HOLDING', 'BOOKED'),
         allowNull: false,
         validate: {
             notNull: { msg: 'Trạng thái ghế không được để trống' },
             isIn: {
-                args: [['available', 'holding', 'booked']],
-                msg: 'Trạng thái ghế phải là "available", "holding" hoặc "booked"',
+                args: [['AVAILABLE', 'HOLDING', 'BOOKED']],
+                msg: 'Trạng thái ghế phải là "AVAILABLE", "HOLDING" hoặc "BOOKED"',
             },
         },
     },

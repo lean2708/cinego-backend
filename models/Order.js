@@ -24,13 +24,13 @@ const Order = sequelize.define('Order', {
         },
     },
     status: {
-        type: DataTypes.ENUM('pending', 'success', 'failed'),
+        type: DataTypes.ENUM('PENDING', 'SUCCESS', 'FAILED'),
         allowNull: false,
         validate: {
             notNull: { msg: 'Trạng thái đơn hàng không được để trống' },
             isIn: {
-                args: [['pending', 'success', 'failed']],
-                msg: 'Trạng thái đơn hàng phải là "pending", "success" hoặc "failed"',
+                args: [['PENDING', 'SUCCESS', 'FAILED']],
+                msg: 'Trạng thái đơn hàng phải là "PENDING", "SUCCESS" hoặc "FAILED"',
             },
         },
     },

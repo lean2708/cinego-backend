@@ -2,9 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/database'); 
-
-
-
+const rootRouter = require('./routes'); 
+const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -20,6 +19,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+
+app.use(rootRouter);
+app.use(errorHandler);
 
 
 app.listen(PORT, async () => {

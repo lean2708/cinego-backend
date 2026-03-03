@@ -4,12 +4,15 @@ const cors = require('cors');
 const sequelize = require('./config/database'); 
 const rootRouter = require('./routes'); 
 const errorHandler = require("./middlewares/errorHandler");
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
+
+
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 
-app.use(cors()); 
 app.use(express.json());
 
 
@@ -22,6 +25,9 @@ app.use(cors({
 
 app.use(rootRouter);
 app.use(errorHandler);
+
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 
 app.listen(PORT, async () => {

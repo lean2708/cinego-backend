@@ -125,8 +125,54 @@ const getMyProfile = async (req, res, next) =>{
 
 
 
+const changePassword = async (req, res, next) => {
+    try {
+        const userId = req.user.id; 
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        console.log("Received a request to change password for userId:" + userId);
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            throw new AppError(400, "Please provide current password, new password and confirm password");
+        }
+
+        if (newPassword !== confirmPassword) {
+            throw new AppError(400, "New Password and Confirm Password do not match");
+        }
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            throw new AppError(404, "User not found");
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+        if (!isMatch) {
+            throw new AppError(400, "Current password is incorrect");
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        user.password_hash = hashedPassword;
+        await user.save();
+
+        console.log("Password changed successfully for userId:" + userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Change password successfully"
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+
 module.exports = {
     register,
     login,
-    getMyProfile
+    getMyProfile,
+    changePassword
 }

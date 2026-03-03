@@ -1,5 +1,5 @@
 const express = require("express");
-const { register, login, getMyProfile } = require("../controllers/authController");
+const { register, login, getMyProfile, changePassword } = require("../controllers/authController");
 const { authToken } = require("../middlewares/authToken");
 
 const router = express.Router();
@@ -178,6 +178,44 @@ router.post("/login", login);
  *         description: Forbidden
  */
 router.get("/myInfo", authToken, getMyProfile);
+
+
+
+/**
+ * @swagger
+ * /auth/change-password:
+ *   put:
+ *     summary: Change password for logged-in user
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *               - confirmPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: "oldPass123"
+ *               newPassword:
+ *                 type: string
+ *                 example: "newPass456"
+ *               confirmPassword:
+ *                 type: string
+ *                 example: "newPass456"
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Invalid password or mismatch
+ */
+router.put("/change-password", authToken, changePassword);
 
 
 module.exports = router;

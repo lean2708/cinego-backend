@@ -1,8 +1,8 @@
 
-const AppError = require("../utils/appError");
 const jwt = require('jsonwebtoken');
 const { verifyToken } = require("../utils/jwt");
-const User = require("../models/User");
+const AppError = require('../utils/appError');
+const User = require('../models/User');
 
 
 

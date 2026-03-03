@@ -102,8 +102,31 @@ const login = async (req, res, next) => {
 
 
 
+const getMyProfile = async (req, res, next) =>{
+    try {
+        const user = req.user;
+
+        console.log("Received a request to get myinfo for userId:", user.id);
+
+        console.log("Get MyInfo for userId:", user.id);
+
+        return res.status(200).json({
+            success : true,
+            message : "Get my info",
+            data : {
+                user
+            },
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+}
+
+
 
 module.exports = {
     register,
-    login
+    login,
+    getMyProfile
 }

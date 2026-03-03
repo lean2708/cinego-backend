@@ -51,13 +51,13 @@ const Movie = sequelize.define('Movie', {
         },
     },
     status: {
-        type: DataTypes.ENUM('showing', 'coming_soon', 'passed'),
+        type: DataTypes.ENUM('SHOWING', 'COMING_SOON', 'PASSED'),
         allowNull: false,
         validate: {
             notNull: { msg: 'Trạng thái phim không được để trống' },
             isIn: {
-                args: [['showing', 'coming_soon', 'passed']],
-                msg: 'Trạng thái phim phải là "showing", "coming_soon" hoặc "passed"',
+                args: [['SHOWING', 'COMING_SOON', 'PASSED']],
+                msg: 'Trạng thái phim phải là "SHOWING", "COMING_SOON" hoặc "PASSED"',
             },
         },
     },

@@ -32,13 +32,13 @@ const Seat = sequelize.define('Seat', {
         },
     },
     type: {
-        type: DataTypes.ENUM('vip', 'couple', 'standard'),
+        type: DataTypes.ENUM('VIP', 'COUPLE', 'STANDARD'),
         allowNull: false,
         validate: {
             notNull: { msg: 'Loại ghế không được để trống' },
             isIn: {
-                args: [['vip', 'couple', 'standard']],
-                msg: 'Loại ghế phải là "vip", "couple" hoặc "standard"',
+                args: [['VIP', 'COUPLE', 'STANDARD']],
+                msg: 'Loại ghế phải là "VIP", "COUPLE" hoặc "STANDARD"',
             },
         },
     },

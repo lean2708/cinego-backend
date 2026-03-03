@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
+
 const User = sequelize.define('User', {
     id: {
         type: DataTypes.BIGINT,
@@ -17,17 +18,17 @@ const User = sequelize.define('User', {
         },
     },
     gender: {
-        type: DataTypes.ENUM('male', 'female'),
+        type: DataTypes.ENUM('MALE', 'FEMALE'),
         allowNull: true,
         validate: {
-            isIn: { args: [['male', 'female']], msg: 'Giới tính phải là "male" hoặc "female"' },
+            isIn: { args: [['MALE', 'FEMALE']], msg: 'Giới tính phải là "MALE" hoặc "FEMALE"' },
         },
     },
     dob: {
         type: DataTypes.DATEONLY,
         allowNull: true,
         validate: {
-            isDate: { msg: 'Ngày sinh không hợp lệ' },
+            isDate: { msg: 'Ngày sinh không hợp lệ (YYYY-MM-DD)' },
         },
     },
     phone: {
@@ -67,17 +68,12 @@ const User = sequelize.define('User', {
         },
     },
     role: {
-        type: DataTypes.ENUM('admin', 'user'),
+        type: DataTypes.ENUM('ADMIN', 'USER'),
         allowNull: false,
-        defaultValue: 'user',
+        defaultValue: 'USER',
         validate: {
-            isIn: { args: [['admin', 'user']], msg: 'Vai trò phải là "admin" hoặc "user"' },
+            isIn: { args: [['ADMIN', 'USER']], msg: 'Vai trò phải là "ADMIN" hoặc "USER"' },
         },
-    },
-    is_active: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true,
     },
     is_deleted: {
         type: DataTypes.BOOLEAN,

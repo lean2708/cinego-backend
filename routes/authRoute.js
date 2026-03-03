@@ -1,5 +1,6 @@
 const express = require("express");
-const { register, login } = require("../controllers/authController");
+const { register, login, getMyProfile } = require("../controllers/authController");
+const { authToken } = require("../middlewares/authToken");
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ const router = express.Router();
  *                 example: test@gmail.com
  *               phone:
  *                 type: string
- *                 example: 0901234567
+ *                 example: 09123456782
  *               password:
  *                 type: string
  *                 example: 123456
@@ -127,7 +128,56 @@ router.post("/login", login);
 
 
 
-
+/**
+ * @swagger
+ * /auth/myInfo:
+ *   get:
+ *     summary: Get current user profile
+ *     description: Retrieve authenticated user's profile information
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Get my info
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           example: 1
+ *                         full_name:
+ *                           type: string
+ *                           example: Nguyen Van A
+ *                         email:
+ *                           type: string
+ *                           example: test@gmail.com
+ *                         phone:
+ *                           type: string
+ *                           example: 0901234567
+ *                         role:
+ *                           type: string
+ *                           example: USER
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       403:
+ *         description: Forbidden
+ */
+router.get("/myInfo", authToken, getMyProfile);
 
 
 module.exports = router;

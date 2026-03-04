@@ -6,6 +6,7 @@ const rootRouter = require('./routes');
 const errorHandler = require("./middlewares/errorHandler");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
+const createDefaultAdmin = require('./utils/initDefaultData');
 
 
 
@@ -38,6 +39,8 @@ app.listen(PORT, async () => {
     console.log('Database connection has been established successfully.');
 
     await sequelize.sync({ alter: true });
+
+    await createDefaultAdmin();
 
     console.log("SERVER IS READY TO HANDLE REQUESTS !");
 

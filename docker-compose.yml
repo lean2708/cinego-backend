@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  cinego-backend:
+    image: lean2708/cinego-backend:1.0.0
+    container_name: cinego-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - postgres-cinego
+    networks:
+      - cinego-network
+
+
+  postgres-cinego:
+    image: postgres:16
+    container_name: postgres-cinego
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cinego-network
+
+volumes:
+  postgres_data:
+
+networks:
+  cinego-network:
+    driver: bridge

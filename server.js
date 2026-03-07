@@ -4,12 +4,16 @@ const cors = require('cors');
 const sequelize = require('./config/database'); 
 const rootRouter = require('./routes'); 
 const errorHandler = require("./middlewares/errorHandler");
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
+const createDefaultAdmin = require('./utils/initDefaultData');
+
+
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 
-app.use(cors()); 
 app.use(express.json());
 
 
@@ -24,6 +28,9 @@ app.use(rootRouter);
 app.use(errorHandler);
 
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+
+
 app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 
@@ -32,6 +39,8 @@ app.listen(PORT, async () => {
     console.log('Database connection has been established successfully.');
 
     await sequelize.sync({ alter: true });
+
+    await createDefaultAdmin();
 
     console.log("SERVER IS READY TO HANDLE REQUESTS !");
 

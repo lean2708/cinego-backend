@@ -1,7 +1,8 @@
-const { Seat, sequelize } = require("../models");
+const sequelize = require("../config/database");
 const AppError = require("../utils/appError");
 const xlsx = require("xlsx");
 const fs = require("fs");
+const Seat = require("../models/Seat");
 
 const importSeatsFromExcel = async (req, res, next) => 
 {

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const seatController = require("../controllers/seatController");
-const { authToken, isAdmin } = require("../middlewares/authMiddleware");
+const { authToken, isAdmin } = require("../middlewares/authToken");
 const upload = multer({ dest: "uploads/" });
 /**
  * @swagger

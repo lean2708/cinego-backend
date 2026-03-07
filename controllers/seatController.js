@@ -3,21 +3,19 @@ const AppError = require("../utils/appError");
 const xlsx = require("xlsx");
 const fs = require("fs");
 
-const importSeatsFromExcel = async (req, res, next) => 
-{
+const importSeatsFromExcel = async (req, res, next) => {
     const t = await sequelize.transaction();
-    try 
-    {
-        if (!req.file)
-            throw new AppError(400, "No file");
+    try {
+        console.log("importSeatsFromExcel file:", req.file?.filename);
+        if (!req.file) throw new AppError(400, "No file");
 
         const wb = xlsx.readFile(req.file.path);
         const data = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         
-        if (data.length === 0)
-            throw new AppError(400, "Empty");
+        if (data.length === 0) throw new AppError(400, "Empty");
 
         const ids = [...new Set(data.map(i => i.room_id))];
+        console.log("Room IDs:", ids);
 
         await Seat.destroy({ where: { room_id: ids }, transaction: t });
 
@@ -31,131 +29,76 @@ const importSeatsFromExcel = async (req, res, next) =>
 
         const result = await Seat.bulkCreate(list, { transaction: t });
         await t.commit();
+        console.log("Import success:", result.length, "seats");
 
-        if (fs.existsSync(req.file.path))
-            fs.unlinkSync(req.file.path);
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-        const map = result.reduce((a, s) => 
-        {
-            if (!a[s.row_label])
-                a[s.row_label] = [];
-                
-            a[s.row_label].push({
-                id: s.id,
-                number: s.number,
-                type: s.type
-            });
+        const map = result.reduce((a, s) => {
+            if (!a[s.row_label]) a[s.row_label] = [];
+            a[s.row_label].push({ id: s.id, number: s.number, type: s.type });
             return a;
         }, {});
 
         return res.status(201).json({ success: true, data: map });
-    } 
-    catch (e) 
-    {
+    } catch (e) {
+        console.error("Import error:", e.message);
         await t.rollback();
-        if (req.file && fs.existsSync(req.file.path))
-            fs.unlinkSync(req.file.path);
-            
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         next(e);
     }
 };
 
-const createSeat = async (req, res, next) => 
-{
-    try 
-    {
+const createSeat = async (req, res, next) => {
+    try {
         const s = await Seat.create({ ...req.body, updated_by: req.user.id });
+        console.log("createSeat ID:", s.id);
         return res.status(201).json({ success: true, data: s });
-    } 
-    catch (e) 
-    {
-        next(e);
-    }
+    } catch (e) { next(e); }
 };
 
-const updateSeatById = async (req, res, next) => 
-{
-    try 
-    {
+const updateSeatById = async (req, res, next) => {
+    try {
+        console.log("updateSeatById ID:", req.params.id);
         const s = await Seat.findByPk(req.params.id);
-        
-        if (!s || s.is_deleted)
-            throw new AppError(404, "Not found");
-
+        if (!s || s.is_deleted) throw new AppError(404, "Not found");
         await s.update({ ...req.body, updated_by: req.user.id });
         return res.status(200).json({ success: true, data: s });
-    } 
-    catch (e) 
-    {
-        next(e);
-    }
+    } catch (e) { next(e); }
 };
 
-const deleteSeatById = async (req, res, next) => 
-{
-    try 
-    {
+const deleteSeatById = async (req, res, next) => {
+    try {
+        console.log("deleteSeatById ID:", req.params.id);
         const s = await Seat.findByPk(req.params.id);
-        
-        if (!s || s.is_deleted)
-            throw new AppError(404, "Not found");
-
+        if (!s || s.is_deleted) throw new AppError(404, "Not found");
         await s.update({ is_deleted: true, updated_by: req.user.id });
         return res.status(200).json({ success: true });
-    } 
-    catch (e) 
-    {
-        next(e);
-    }
+    } catch (e) { next(e); }
 };
 
-const getAllSeats = async (req, res, next) => 
-{
-    try 
-    {
+const getAllSeats = async (req, res, next) => {
+    try {
+        console.log("getAllSeats room_id:", req.query.room_id || "all");
         const { room_id, type } = req.query;
         const filter = { is_deleted: false };
-
-        if (room_id)
-            filter.room_id = room_id;
-        if (type)
-            filter.type = type;
+        if (room_id) filter.room_id = room_id;
+        if (type) filter.type = type;
 
         const list = await Seat.findAll({ 
             where: filter, 
             order: [['row_label', 'ASC'], ['number', 'ASC']] 
         });
-
         return res.status(200).json({ success: true, data: list });
-    } 
-    catch (e) 
-    {
-        next(e);
-    }
+    } catch (e) { next(e); }
 };
 
-const getSeatById = async (req, res, next) => 
-{
-    try 
-    {
+const getSeatById = async (req, res, next) => {
+    try {
+        console.log("getSeatById ID:", req.params.id);
         const s = await Seat.findOne({ where: { id: req.params.id, is_deleted: false } });
-        
-        if (!s)
-            throw new AppError(404, "Not found");
-
+        if (!s) throw new AppError(404, "Not found");
         return res.status(200).json({ success: true, data: s });
-    } 
-    catch (e) 
-    {
-        next(e);
-    }
+    } catch (e) { next(e); }
 };
 
-module.exports = { 
-    importSeatsFromExcel, 
-    createSeat, 
-    updateSeatById, 
-    deleteSeatById, 
-    getAllSeats, 
-    getSeatById 
-};
+module.exports = { importSeatsFromExcel, createSeat, updateSeatById, deleteSeatById, getAllSeats, getSeatById };

@@ -1,0 +1,161 @@
+const { Seat, sequelize } = require("../models");
+const AppError = require("../utils/appError");
+const xlsx = require("xlsx");
+const fs = require("fs");
+
+const importSeatsFromExcel = async (req, res, next) => 
+{
+    const t = await sequelize.transaction();
+    try 
+    {
+        if (!req.file)
+            throw new AppError(400, "No file");
+
+        const wb = xlsx.readFile(req.file.path);
+        const data = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        
+        if (data.length === 0)
+            throw new AppError(400, "Empty");
+
+        const ids = [...new Set(data.map(i => i.room_id))];
+
+        await Seat.destroy({ where: { room_id: ids }, transaction: t });
+
+        const list = data.map(i => ({
+            room_id: i.room_id,
+            row_label: i.row_label.toString().toUpperCase(),
+            number: parseInt(i.number),
+            type: i.type || 'standard',
+            updated_by: req.user.id
+        }));
+
+        const result = await Seat.bulkCreate(list, { transaction: t });
+        await t.commit();
+
+        if (fs.existsSync(req.file.path))
+            fs.unlinkSync(req.file.path);
+
+        const map = result.reduce((a, s) => 
+        {
+            if (!a[s.row_label])
+                a[s.row_label] = [];
+                
+            a[s.row_label].push({
+                id: s.id,
+                number: s.number,
+                type: s.type
+            });
+            return a;
+        }, {});
+
+        return res.status(201).json({ success: true, data: map });
+    } 
+    catch (e) 
+    {
+        await t.rollback();
+        if (req.file && fs.existsSync(req.file.path))
+            fs.unlinkSync(req.file.path);
+            
+        next(e);
+    }
+};
+
+const createSeat = async (req, res, next) => 
+{
+    try 
+    {
+        const s = await Seat.create({ ...req.body, updated_by: req.user.id });
+        return res.status(201).json({ success: true, data: s });
+    } 
+    catch (e) 
+    {
+        next(e);
+    }
+};
+
+const updateSeatById = async (req, res, next) => 
+{
+    try 
+    {
+        const s = await Seat.findByPk(req.params.id);
+        
+        if (!s || s.is_deleted)
+            throw new AppError(404, "Not found");
+
+        await s.update({ ...req.body, updated_by: req.user.id });
+        return res.status(200).json({ success: true, data: s });
+    } 
+    catch (e) 
+    {
+        next(e);
+    }
+};
+
+const deleteSeatById = async (req, res, next) => 
+{
+    try 
+    {
+        const s = await Seat.findByPk(req.params.id);
+        
+        if (!s || s.is_deleted)
+            throw new AppError(404, "Not found");
+
+        await s.update({ is_deleted: true, updated_by: req.user.id });
+        return res.status(200).json({ success: true });
+    } 
+    catch (e) 
+    {
+        next(e);
+    }
+};
+
+const getAllSeats = async (req, res, next) => 
+{
+    try 
+    {
+        const { room_id, type } = req.query;
+        const filter = { is_deleted: false };
+
+        if (room_id)
+            filter.room_id = room_id;
+        if (type)
+            filter.type = type;
+
+        const list = await Seat.findAll({ 
+            where: filter, 
+            order: [['row_label', 'ASC'], ['number', 'ASC']] 
+        });
+
+        return res.status(200).json({ success: true, data: list });
+    } 
+    catch (e) 
+    {
+        next(e);
+    }
+};
+
+const getSeatById = async (req, res, next) => 
+{
+    try 
+    {
+        const s = await Seat.findOne({ where: { id: req.params.id, is_deleted: false } });
+        
+        if (!s)
+            throw new AppError(404, "Not found");
+
+        return res.status(200).json({ success: true, data: s });
+    } 
+    catch (e) 
+    {
+        next(e);
+    }
+};
+
+module.exports = { 
+    importSeatsFromExcel, 
+    createSeat, 
+    updateSeatById, 
+    deleteSeatById, 
+    getAllSeats, 
+    getSeatById 
+};

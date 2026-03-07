@@ -16,38 +16,7 @@ const router = express.Router();
  *   - name: Provinces
  *     description: Operations related to provinces
  *
- * components:
- *   schemas:
- *     Province:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *         name:
- *           type: string
- *         is_deleted:
- *           type: boolean
- *         updated_by:
- *           type: integer
- *         created_at:
- *           type: string
- *           format: date-time
- *         updated_at:
- *           type: string
- *           format: date-time
- *     ProvinceInput:
- *       type: object
- *       required:
- *         - name
- *       properties:
- *         name:
- *           type: string
- *   securitySchemes:
- *     bearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- */
+
 
 /**
  * @swagger

@@ -24,6 +24,15 @@ const generateAccessToken = (user) => {
 }
 
 
+const generateResetToken = (user) => {
+    const secret = process.env.JWT_RESET_KEY;
+    const expiresIn = process.env.JWT_RESET_EXPIRES_IN;
+
+    return generateToken(user, secret, expiresIn);
+}
+
+
+
 const verifyToken = (token, secret) => {
     try {
        return jwt.verify(token, secret);
@@ -35,5 +44,6 @@ const verifyToken = (token, secret) => {
 
 module.exports = {
     generateAccessToken, 
+    generateResetToken,
     verifyToken
 }

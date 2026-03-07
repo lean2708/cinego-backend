@@ -1,6 +1,7 @@
 const authRouter = require("./authRoute");
 const provinceRouter = require("./provinceRoute");
 const userRouter = require("./userRoute");
+const foodRouter = require("./foodRoute");
 const express = require("express");
 
 
@@ -15,6 +16,6 @@ router.use("/provinces", provinceRouter);
 
 router.use("/users", userRouter);
 
-
+router.use("/foods", foodRouter);
 
 module.exports = router;

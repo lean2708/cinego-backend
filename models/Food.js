@@ -22,6 +22,16 @@ const Food = sequelize.define('Food', {
             isUrl: { msg: 'URL hình ảnh đồ ăn không hợp lệ' },
         },
     },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        validate: {
+            len: {
+                args: [0, 1000],
+                msg: 'Mô tả tối đa 1000 ký tự'
+            }
+        }
+    },
     price: {
         type: DataTypes.FLOAT,
         allowNull: false,
@@ -29,6 +39,15 @@ const Food = sequelize.define('Food', {
             notNull: { msg: 'Giá đồ ăn không được để trống' },
             isFloat: { msg: 'Giá đồ ăn phải là số thực' },
             min: { args: [0], msg: 'Giá đồ ăn không được âm' },
+        },
+    },
+    stock_quantity: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        validate: {
+            isInt: { msg: 'Số lượng tồn kho phải là số nguyên' },
+            min: { args: [0], msg: 'Số lượng tồn kho không được âm' },
         },
     },
     is_available: {

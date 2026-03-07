@@ -3,6 +3,7 @@ const provinceRouter = require("./provinceRoute");
 const cinemaRouter = require("./cinemaRoute");
 const seatRouter = require("./seatRoute");
 const userRouter = require("./userRoute");
+const foodRouter = require("./foodRoute");
 const express = require("express");
 
 
@@ -19,6 +20,6 @@ router.use("/seats", seatRouter);
 
 router.use("/users", userRouter);
 
-
+router.use("/foods", foodRouter);
 
 module.exports = router;

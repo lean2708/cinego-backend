@@ -1,5 +1,5 @@
 const express = require("express");
-const { register, login, getMyProfile, changePassword } = require("../controllers/authController");
+const { register, login, forgotPassword,verifyOtp, resetPassword, getMyProfile, changePassword } = require("../controllers/authController");
 const { authToken } = require("../middlewares/authToken");
 
 const router = express.Router();
@@ -130,6 +130,102 @@ router.post("/login", login);
 
 /**
  * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Step 1 - Send OTP to email for password reset
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@gmail.com
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *       404:
+ *         description: User not found
+ */
+router.post("/forgot-password", forgotPassword);
+
+
+
+/**
+ * @swagger
+ * /auth/verify-otp:
+ *   post:
+ *     summary: Step 2 - Verify OTP for password reset
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@gmail.com
+ *               otp:
+ *                 type: string
+ *                 example: 123456
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *       400:
+ *         description: OTP invalid or expired
+ */
+router.post("/verify-otp", verifyOtp);
+
+
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Step 3 - Reset password using reset token
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - resetToken
+ *               - newPassword
+ *               - confirmPassword
+ *             properties:
+ *               resetToken:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 example: newPass123
+ *               confirmPassword:
+ *                 type: string
+ *                 example: newPass123
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid request
+ */
+router.post("/reset-password", resetPassword);
+
+
+/**
+ * @swagger
  * /auth/myInfo:
  *   get:
  *     summary: Get current user profile
@@ -178,6 +274,8 @@ router.post("/login", login);
  *         description: Forbidden
  */
 router.get("/myInfo", authToken, getMyProfile);
+
+
 
 
 

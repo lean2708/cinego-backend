@@ -16,6 +16,16 @@ const Voucher = sequelize.define('Voucher', {
             notEmpty: { msg: 'Mã voucher không được để trống' },
         },
     },
+    description: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: {
+            len: {
+                args: [0, 255],
+                msg: 'Mô tả không được vượt quá 255 ký tự',
+            },
+        },
+    },
     value: {
         type: DataTypes.INTEGER,
         allowNull: false,

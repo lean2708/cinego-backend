@@ -6,7 +6,7 @@ const createVoucher = async (req, res, next) => {
 
     console.log("Received request to create voucher");
 
-    const {code, value, type, start_date, end_date, usage_limit, is_active} = req.body;
+    const {code, value, type, description, start_date, end_date, usage_limit, is_active} = req.body;
 
     if (!code || !value || !type || !start_date || !end_date) {
       throw new AppError(400, "Please provide full voucher information");
@@ -24,6 +24,7 @@ const createVoucher = async (req, res, next) => {
       code,
       value,
       type,
+      description,
       start_date,
       end_date,
       usage_limit,
@@ -124,7 +125,7 @@ const updateVoucher = async (req, res, next) => {
       throw new AppError(404, "Voucher not found");
     }
 
-    const {code, value, type, start_date, end_date, usage_limit, is_active} = req.body;
+    const {code, value, type, description, start_date, end_date, usage_limit, is_active} = req.body;
 
     voucher.code = code ?? voucher.code;
     voucher.value = value ?? voucher.value;

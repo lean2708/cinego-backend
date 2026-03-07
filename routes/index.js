@@ -2,6 +2,7 @@ const authRouter = require("./authRoute");
 const provinceRouter = require("./provinceRoute");
 const cinemaRouter = require("./cinemaRoute");
 const userRouter = require("./userRoute");
+const foodRouter = require("./foodRoute");
 const express = require("express");
 
 
@@ -17,6 +18,6 @@ router.use("/cinemas", cinemaRouter);
 
 router.use("/users", userRouter);
 
-
+router.use("/foods", foodRouter);
 
 module.exports = router;

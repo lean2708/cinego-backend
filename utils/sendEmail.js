@@ -36,6 +36,7 @@ async function sendEmail(toEmail, templateId, params = {}) {
 
     } catch (error) {
         console.error("Error sending email:", error);
+        console.log("Brevo error:", error.response?.data);
     }
 }
 

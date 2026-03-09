@@ -5,6 +5,7 @@ const seatRouter = require("./seatRoute");
 const userRouter = require("./userRoute");
 const foodRouter = require("./foodRoute");
 const voucherRouter = require("./voucherRoute");
+const contactRouter = require("./contactRoute");
 const express = require("express");
 
 
@@ -24,6 +25,8 @@ router.use("/users", userRouter);
 router.use("/foods", foodRouter);
 router.use("/vouchers", voucherRouter);
 
+
+router.use("/contacts", contactRouter);
 
 
 

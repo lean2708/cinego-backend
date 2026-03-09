@@ -41,6 +41,7 @@ async function sendEmail(toEmail, templateId, params = {}) {
 }
 
 
+
 async function sendOtpForgotPassword(toEmail, toName, otp, expiresIn){
     const templateId = parseInt(process.env.BREVO_OTP_FORGOT_PASSWORD_TEMPLATE_ID);
 
@@ -55,6 +56,20 @@ async function sendOtpForgotPassword(toEmail, toName, otp, expiresIn){
 
 
 
+async function sendContactReplyEmail(toEmail, toName, replyMessage) {
+    const templateId = parseInt(process.env.BREVO_CONTACT_REPLY_TEMPLATE_ID);
+
+    const params = {
+        name: toName,
+        replyMessage: replyMessage
+    };
+
+    await sendEmail(toEmail, templateId, params);
+}
+
+
+
 module.exports = {
-    sendOtpForgotPassword
+    sendOtpForgotPassword,
+    sendContactReplyEmail
 };

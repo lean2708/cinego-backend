@@ -159,7 +159,7 @@ router.post("/forgot-password", forgotPassword);
 
 /**
  * @swagger
- * /auth/verify-otp:
+ * /auth/forgot-password/verify-otp:
  *   post:
  *     summary: Step 2 - Verify OTP for password reset
  *     tags: [Auth]
@@ -186,12 +186,12 @@ router.post("/forgot-password", forgotPassword);
  *       400:
  *         description: OTP invalid or expired
  */
-router.post("/verify-otp", verifyOtp);
+router.post("/forgot-password/verify-otp", verifyOtp);
 
 
 /**
  * @swagger
- * /auth/reset-password:
+ * /auth/forgot-password/reset-password:
  *   post:
  *     summary: Step 3 - Reset password using reset token
  *     tags: [Auth]
@@ -221,7 +221,7 @@ router.post("/verify-otp", verifyOtp);
  *       400:
  *         description: Invalid request
  */
-router.post("/reset-password", resetPassword);
+router.post("/forgot-password/reset-password", resetPassword);
 
 
 /**

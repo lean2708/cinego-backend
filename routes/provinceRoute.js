@@ -15,7 +15,7 @@ const router = express.Router();
  * tags:
  *   - name: Provinces
  *     description: Operations related to provinces
- *
+ */
 
 
 /**

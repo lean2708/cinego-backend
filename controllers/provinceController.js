@@ -80,10 +80,28 @@ const getAllProvinces = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
-}
+};
+const getAllProvincesForAdmin = async (req, res, next) => {
+    try {
+        const provinces = await province.findAll({
+            order: [['is_deleted', 'ASC'], ['name', 'ASC']] 
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Danh sách đầy đủ cho quản trị viên",
+            results: provinces.length,
+            data: provinces
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     addProvince,
     updateProvince,
     deleteProvince,
-    getAllProvinces
+    getAllProvinces,
+    getAllProvincesForAdmin 
 };

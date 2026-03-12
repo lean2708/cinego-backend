@@ -3,7 +3,8 @@ const {
     addProvince,
     updateProvince,
     deleteProvince,
-    getAllProvinces
+    getAllProvinces,
+    getAllProvincesForAdmin
 } = require('../controllers/provinceController');
 const {
     authToken,
@@ -91,6 +92,10 @@ router.post("/", authToken, isAdmin, addProvince);
  *                   type: string
  *                 data:
  *                   $ref: '#/components/schemas/Province'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  *       404:
  *         description: Not Found
  */
@@ -123,6 +128,10 @@ router.patch("/:id", authToken, isAdmin, updateProvince);
  *                   type: boolean
  *                 message:
  *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  *       404:
  *         description: Not Found
  */
@@ -134,7 +143,7 @@ router.delete("/:id", authToken, isAdmin, deleteProvince);
  *   get:
  *     tags:
  *       - Provinces
- *     summary: Retrieve all provinces (not deleted)
+ *     summary: Retrieve all provinces
  *     responses:
  *       200:
  *         description: A list of provinces
@@ -152,5 +161,37 @@ router.delete("/:id", authToken, isAdmin, deleteProvince);
  *                   items:
  *                     $ref: '#/components/schemas/Province'
  */
-router.get("/",getAllProvinces);
+router.get("/", getAllProvinces);
+/**
+ * @swagger
+ * /provinces/admin:
+ *   get:
+ *     tags:
+ *       - Provinces
+ *     summary: Retrieve all provinces (admin)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of provinces
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 results:
+ *                   type: integer
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Province'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get("/admin", authToken, isAdmin, getAllProvincesForAdmin);
+
 module.exports = router;

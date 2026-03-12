@@ -48,15 +48,6 @@ const importSeatsFromExcel = async (req, res, next) => {
         next(e);
     }
 };
-
-const createSeat = async (req, res, next) => {
-    try {
-        const s = await Seat.create({ ...req.body, updated_by: req.user.id });
-        console.log("createSeat ID:", s.id);
-        return res.status(201).json({ success: true, data: s });
-    } catch (e) { next(e); }
-};
-
 const updateSeatById = async (req, res, next) => {
     try {
         console.log("updateSeatById ID:", req.params.id);
@@ -66,7 +57,22 @@ const updateSeatById = async (req, res, next) => {
         return res.status(200).json({ success: true, data: s });
     } catch (e) { next(e); }
 };
+const createSeat = async (req, res, next) => {
+    try {
+        const { room_id, row_label, number, type } = req.body;
 
+        if (!room_id || !row_label || !number) throw new AppError(400, "Missing fields");
+
+        const row = row_label.toString().toUpperCase();
+        const num = parseInt(number);
+
+        const exists = await Seat.findOne({ where: { room_id, row_label: row, number: num, is_deleted: false } });
+        if (exists) throw new AppError(400, "Seat exists");
+
+        const data = await Seat.create({ ...req.body, row_label: row, number: num, updated_by: req.user.id });
+        return res.status(201).json({ success: true, data });
+    } catch (e) { next(e); }
+};
 const deleteSeatById = async (req, res, next) => {
     try {
         console.log("deleteSeatById ID:", req.params.id);

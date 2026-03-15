@@ -9,6 +9,7 @@ const contactRouter = require("./contactRoute");
 const movieRouter = require("./movieRoute");
 const genreRouter = require("./genreRoute");
 const fileRouter = require("./fileRoute");
+const showtimeRouter = require("./showtimeRoute");
 const express = require("express");
 
 
@@ -35,6 +36,8 @@ router.use("/contacts", contactRouter);
 
 router.use("/files", fileRouter);
 
+
+router.use("/showtimes", showtimeRouter);
 
 
 

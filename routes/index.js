@@ -6,6 +6,8 @@ const userRouter = require("./userRoute");
 const foodRouter = require("./foodRoute");
 const voucherRouter = require("./voucherRoute");
 const contactRouter = require("./contactRoute");
+const movieRouter = require("./movieRoute");
+const genreRouter = require("./genreRoute");
 const express = require("express");
 
 
@@ -18,6 +20,8 @@ const router = express.Router();
 router.use("/auth", authRouter);
 router.use("/provinces", provinceRouter);
 router.use("/cinemas", cinemaRouter);
+router.use("/movies", movieRouter);
+router.use("/genres", genreRouter);
 router.use("/seats", seatRouter);
 
 router.use("/users", userRouter);

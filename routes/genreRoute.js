@@ -1,11 +1,11 @@
 const express = require('express');
 const {
-    addGenre,
+    getAllGenres,
+    getAllGenresForAdmin,
+    getGenreById,
+    createGenre,
     updateGenre,
     deleteGenre,
-    getAllForUser,
-    getAllForAdmin,
-    getGenreById
 } = require('../controllers/genreController');
 const { authToken, isAdmin } = require('../middlewares/authToken');
 const router = express.Router();
@@ -36,7 +36,7 @@ const router = express.Router();
  *       400:
  *         description: Validation error
  */
-router.post('/', authToken, isAdmin, addGenre);
+router.post('/', authToken, isAdmin, createGenre);
 
 /**
  * @swagger
@@ -108,7 +108,7 @@ router.delete('/:id', authToken, isAdmin, deleteGenre);
  *       200:
  *         description: Get genres for admin successfully
  */
-router.get('/admin', authToken, isAdmin, getAllForAdmin);
+router.get('/admin', authToken, isAdmin, getAllGenresForAdmin);
 
 /**
  * @swagger
@@ -120,7 +120,7 @@ router.get('/admin', authToken, isAdmin, getAllForAdmin);
  *       200:
  *         description: Get genres successfully
  */
-router.get('/', getAllForUser);
+router.get('/', getAllGenres);
 
 /**
  * @swagger

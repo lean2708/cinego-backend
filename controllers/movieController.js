@@ -1,8 +1,8 @@
-const { Movie, MovieGenre } = require('../models');
+const Movie = require('../models/Movie');
+const Genre = require('../models/Genre');
+const MovieGenre = require('../models/MovieGenre');
 const sequelize = require('../config/database');
 const AppError = require('../utils/appError');
-
-// 1. Lấy danh sách phim cho NGƯỜI DÙNG (Chỉ lấy phim chưa bị xóa)
 const getAllMovies = async (req, res, next) => {
     try {
         console.log('[getAllMovies]');
@@ -61,15 +61,9 @@ const createMovie = async (req, res, next) => {
     try {
         console.log('[createMovie] body:', req.body);
         const { genreIds, ...movieData } = req.body;
-
         const newMovie = await Movie.create(movieData, { transaction });
-
         if (genreIds && Array.isArray(genreIds) && genreIds.length > 0) {
-            const movieGenresData = genreIds.map((genre_id) => ({
-                movie_id: newMovie.id,
-                genre_id: genre_id,
-            }));
-            await MovieGenre.bulkCreate(movieGenresData, { transaction });
+            await newMovie.setGenres(genreIds, { transaction });
         }
 
         await transaction.commit();
@@ -86,10 +80,8 @@ const createMovie = async (req, res, next) => {
 };
 const updateMovie = async (req, res, next) => {
     const transaction = await sequelize.transaction();
-    
     try {
         const { id } = req.params;
-        console.log('[updateMovie] id:', id, '| body:', req.body);
         const { genreIds, ...updateData } = req.body;
 
         const movie = await Movie.findOne({ where: { id, is_deleted: false } });
@@ -97,19 +89,9 @@ const updateMovie = async (req, res, next) => {
             await transaction.rollback();
             return res.status(404).json({ success: false, message: 'Không tìm thấy phim!' });
         }
-
         await movie.update(updateData, { transaction });
-
         if (genreIds && Array.isArray(genreIds)) {
-            await MovieGenre.destroy({ where: { movie_id: id }, transaction });
-
-            if (genreIds.length > 0) {
-                const movieGenresData = genreIds.map((genre_id) => ({
-                    movie_id: id,
-                    genre_id: genre_id,
-                }));
-                await MovieGenre.bulkCreate(movieGenresData, { transaction });
-            }
+            await movie.setGenres(genreIds, { transaction });
         }
 
         await transaction.commit();
@@ -119,7 +101,6 @@ const updateMovie = async (req, res, next) => {
             data: movie,
         });
     } catch (error) {
-        console.error('[updateMovie] Error:', error.message);
         await transaction.rollback();
         next(error);
     }

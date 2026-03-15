@@ -29,7 +29,8 @@ app.use(errorHandler);
 
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-
+const initializeAssociations = require('./models/associations');
+initializeAssociations();
 
 app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);

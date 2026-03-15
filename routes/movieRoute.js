@@ -1,10 +1,10 @@
 const express = require('express');
 const {
-    addMovie, // Thay tên hàm tương ứng với controller của bạn nếu cần (createMovie)
+    createMovie,        
     updateMovie,
     deleteMovie,
-    getAllForUser,
-    getAllForAdmin,
+    getAllMovies,      
+    getAllMoviesForAdmin, 
     getMovieById
 } = require('../controllers/movieController');
 const { authToken, isAdmin } = require('../middlewares/authToken');
@@ -68,7 +68,7 @@ const router = express.Router();
  *       400:
  *         description: Validation error
  */
-router.post('/', authToken, isAdmin, addMovie);
+router.post('/', authToken, isAdmin, createMovie);
 
 /**
  * @swagger
@@ -148,7 +148,7 @@ router.delete('/:id', authToken, isAdmin, deleteMovie);
  *       200:
  *         description: Get movies for admin successfully
  */
-router.get('/admin', authToken, isAdmin, getAllForAdmin);
+router.get('/admin', authToken, isAdmin, getAllMoviesForAdmin);
 
 /**
  * @swagger
@@ -160,7 +160,7 @@ router.get('/admin', authToken, isAdmin, getAllForAdmin);
  *       200:
  *         description: Get movies successfully
  */
-router.get('/', getAllForUser);
+router.get('/', getAllMovies);
 
 /**
  * @swagger

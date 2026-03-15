@@ -1,4 +1,4 @@
-const { Genre } = require('../models');
+const Genre = require('../models/Genre');
 const getAllGenres = async (req, res, next) => {
     try {
         console.log('[getAllGenres]');

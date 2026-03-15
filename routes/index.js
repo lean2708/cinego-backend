@@ -6,6 +6,7 @@ const userRouter = require("./userRoute");
 const foodRouter = require("./foodRoute");
 const voucherRouter = require("./voucherRoute");
 const contactRouter = require("./contactRoute");
+const fileRouter = require("./fileRoute");
 const express = require("express");
 
 
@@ -28,6 +29,7 @@ router.use("/vouchers", voucherRouter);
 
 router.use("/contacts", contactRouter);
 
+router.use("/files", fileRouter);
 
 
 

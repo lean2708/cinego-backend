@@ -3,8 +3,10 @@ const {
   createVoucher,
   getVoucherById,
   getAllVouchersForAdmin,
+  getMyVouchers,
   updateVoucher,
-  deleteVoucher
+  deleteVoucher,
+  checkVoucher
 } = require("../controllers/voucherController");
 
 const { authToken, isAdmin } = require("../middlewares/authToken");
@@ -71,6 +73,78 @@ const router = express.Router();
  *         description: Voucher code already exists
  */
 router.post("/", authToken, isAdmin, createVoucher);
+
+
+
+/**
+ * @swagger
+ * /vouchers/check:
+ *   post:
+ *     summary: Check voucher discount amount
+ *     tags: [Vouchers]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *               - total_amount
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 example: SALE50
+ *               total_amount:
+ *                 type: number
+ *                 example: 200000
+ *     responses:
+ *       200:
+ *         description: Voucher is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     voucher_id:
+ *                       type: integer
+ *                     code:
+ *                       type: string
+ *                     discount_amount:
+ *                       type: number
+ *                     original_amount:
+ *                       type: number
+ *       400:
+ *         description: Voucher invalid, expired, or usage limit reached
+ *       404:
+ *         description: Voucher not found
+ */
+router.post("/check", authToken, checkVoucher);
+
+
+
+/**
+ * @swagger
+ * /vouchers/my-vouchers:
+ *   get:
+ *     summary: Get all vouchers with usage status for current user
+ *     tags: [Vouchers]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Get my vouchers successfully
+ */
+router.get("/my-vouchers", authToken, getMyVouchers);
 
 
 

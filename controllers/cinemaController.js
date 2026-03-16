@@ -1,17 +1,16 @@
 const Cinema = require("../models/Cinema");
 const Province = require("../models/Province");
 const AppError = require("../utils/appError");
+
 const getCinemasForUser = async (req, res, next) => {
     try {
-        const {
-            province_id
-        } = req.query;
-        console.log("getCinemasForUser province_id:", province_id || "all");
+        const { province_id } = req.query;
 
-        const filter = {
-            is_deleted: false
-        };
-        if (province_id) filter.province_id = province_id;
+        const filter = { is_deleted: false };
+        if (province_id) {
+            if (isNaN(province_id)) throw new AppError(400, "province_id phải là số");
+            filter.province_id = province_id;
+        }
 
         const cinemas = await Cinema.findAll({
             where: filter,
@@ -20,9 +19,7 @@ const getCinemasForUser = async (req, res, next) => {
                 as: 'province',
                 attributes: ['id', 'name']
             }],
-            order: [
-                ['name', 'ASC']
-            ]
+            order: [['name', 'ASC']]
         });
 
         return res.status(200).json({
@@ -34,15 +31,16 @@ const getCinemasForUser = async (req, res, next) => {
         next(error);
     }
 };
+
 const getCinemasForAdmin = async (req, res, next) => {
     try {
-        const {
-            province_id
-        } = req.query;
-        console.log("getCinemasForAdmin province_id:", province_id || "all");
+        const { province_id } = req.query;
 
         const filter = {};
-        if (province_id) filter.province_id = province_id;
+        if (province_id) {
+            if (isNaN(province_id)) throw new AppError(400, "province_id phải là số");
+            filter.province_id = province_id;
+        }
 
         const cinemas = await Cinema.findAll({
             where: filter,
@@ -69,11 +67,24 @@ const getCinemasForAdmin = async (req, res, next) => {
 
 const addCinema = async (req, res, next) => {
     try {
+        const { name, address, province_id, phone } = req.body;
+
+        if (!name || !address || !province_id) {
+            throw new AppError(400, "Thiếu thông tin rạp bắt buộc");
+        }
+
+        if (phone && !/^[0-9]{10}$/.test(phone)) {
+            throw new AppError(400, "Số điện thoại không hợp lệ");
+        }
+
+        const province = await Province.findByPk(province_id);
+        if (!province) throw new AppError(404, "Tỉnh thành không tồn tại");
+
         const newCinema = await Cinema.create({
             ...req.body,
             updated_by: req.user.id
         });
-        console.log("addCinema ID:", newCinema.id);
+
         return res.status(201).json({
             success: true,
             data: newCinema
@@ -85,17 +96,28 @@ const addCinema = async (req, res, next) => {
 
 const updateCinema = async (req, res, next) => {
     try {
-        const {
-            id
-        } = req.params;
-        console.log("updateCinema ID:", id);
+        const { id } = req.params;
+        const { province_id, phone } = req.body;
+
+        if (isNaN(id)) throw new AppError(400, "ID rạp không hợp lệ");
+
         const cinema = await Cinema.findByPk(id);
         if (!cinema) throw new AppError(404, "Không tìm thấy rạp");
+
+        if (province_id) {
+            const province = await Province.findByPk(province_id);
+            if (!province) throw new AppError(404, "Tỉnh thành không tồn tại");
+        }
+
+        if (phone && !/^[0-9]{10}$/.test(phone)) {
+            throw new AppError(400, "Số điện thoại không hợp lệ");
+        }
 
         await cinema.update({
             ...req.body,
             updated_by: req.user.id
         });
+
         return res.status(200).json({
             success: true,
             data: cinema
@@ -107,10 +129,9 @@ const updateCinema = async (req, res, next) => {
 
 const deleteCinema = async (req, res, next) => {
     try {
-        const {
-            id
-        } = req.params;
-        console.log("deleteCinema ID:", id);
+        const { id } = req.params;
+        if (isNaN(id)) throw new AppError(400, "ID rạp không hợp lệ");
+
         const cinema = await Cinema.findByPk(id);
         if (!cinema) throw new AppError(404, "Không tìm thấy rạp");
 
@@ -118,6 +139,7 @@ const deleteCinema = async (req, res, next) => {
             is_deleted: true,
             updated_by: req.user.id
         });
+
         return res.status(200).json({
             success: true
         });
@@ -128,10 +150,9 @@ const deleteCinema = async (req, res, next) => {
 
 const getCinemaById = async (req, res, next) => {
     try {
-        const {
-            id
-        } = req.params;
-        console.log("getCinemaById ID:", id);
+        const { id } = req.params;
+        if (isNaN(id)) throw new AppError(400, "ID rạp không hợp lệ");
+
         const cinema = await Cinema.findOne({
             where: {
                 id,
@@ -143,7 +164,9 @@ const getCinemaById = async (req, res, next) => {
                 attributes: ['id', 'name']
             }]
         });
+
         if (!cinema) throw new AppError(404, "Không tìm thấy rạp");
+
         return res.status(200).json({
             success: true,
             data: cinema

@@ -10,6 +10,7 @@ const movieRouter = require("./movieRoute");
 const genreRouter = require("./genreRoute");
 const fileRouter = require("./fileRoute");
 const showtimeRouter = require("./showtimeRoute");
+const cinemaRoomRouter = require("./cinemaRoomRoute");
 const express = require("express");
 
 
@@ -24,6 +25,7 @@ router.use("/provinces", provinceRouter);
 router.use("/cinemas", cinemaRouter);
 router.use("/movies", movieRouter);
 router.use("/genres", genreRouter);
+router.use("/cinema-rooms", cinemaRoomRouter);
 router.use("/seats", seatRouter);
 
 router.use("/users", userRouter);

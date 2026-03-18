@@ -1,10 +1,11 @@
 const Food = require("../models/Food");
 const AppError = require("../utils/appError");
 const { Op } = require("sequelize");
-
+const sequelize = require("../config/database");
 
 
 const createFood = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
         const { name, image_url, description, price, stock_quantity, is_available } = req.body;
 
@@ -31,7 +32,9 @@ const createFood = async (req, res, next) => {
             price,
             stock_quantity,
             is_available
-        });
+        }, { transaction });
+
+        await transaction.commit();
 
         console.log("Create food:", newFood.id, "successfully");
 
@@ -44,6 +47,7 @@ const createFood = async (req, res, next) => {
         });
 
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 };
@@ -158,6 +162,7 @@ const getAllFoodsForUser = async (req, res, next) => {
 
 
 const updateFood = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
 
         console.log("Received request to update food:", req.params.id);
@@ -184,7 +189,9 @@ const updateFood = async (req, res, next) => {
         food.stock_quantity = stock_quantity ?? food.stock_quantity;
         food.is_available = is_available ?? food.is_available;
 
-        await food.save();
+        await food.save({ transaction });
+
+        await transaction.commit();
 
         console.log("Update food:", req.params.id, "successfully");
 
@@ -197,6 +204,7 @@ const updateFood = async (req, res, next) => {
         });
 
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 };
@@ -204,6 +212,7 @@ const updateFood = async (req, res, next) => {
 
 
 const deleteFood = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
 
         const foodId = req.params.id;
@@ -224,8 +233,9 @@ const deleteFood = async (req, res, next) => {
         await food.update({
             is_deleted: true,
             updated_by: loggedInUser.id
-        });
+        }, { transaction });
 
+        await transaction.commit();
         console.log("Soft delete food:", foodId, "successfully");
 
         return res.status(200).json({
@@ -234,6 +244,7 @@ const deleteFood = async (req, res, next) => {
         });
 
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 };

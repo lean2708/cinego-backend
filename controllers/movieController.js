@@ -33,7 +33,7 @@ const getAllMoviesForAdmin = async (req, res, next) => {
                 as: 'genres',
                 through: { attributes: [] }
             }],
-            order: [['is_deleted', 'ASC'], ['createdAt', 'DESC']]
+            order: [['is_deleted', 'ASC'], ['created_at', 'DESC']]
         });
 
         return res.status(200).json({
@@ -73,104 +73,122 @@ const getMovieById = async (req, res, next) => {
 };
 
 const createMovie = async (req, res, next) => {
-    const transaction = await sequelize.transaction();
     try {
-        const { title, duration, release_date, genreIds, ...movieData } = req.body;
+        const result = await sequelize.transaction(async (t) => {
+            const { title, duration, release_date, genreIds, ...movieData } = req.body;
 
-        if (!title || !duration || !release_date) {
-            throw new AppError(400, "Vui lòng cung cấp tiêu đề, thời lượng và ngày khởi chiếu");
-        }
-
-        if (isNaN(duration) || duration <= 0) {
-            throw new AppError(400, "Thời lượng phim phải là số dương");
-        }
-
-        if (genreIds && !Array.isArray(genreIds)) {
-            throw new AppError(400, "Danh sách thể loại (genreIds) phải là một mảng");
-        }
-
-        const newMovie = await Movie.create(
-            { ...movieData, title, duration, release_date },
-            { transaction }
-        );
-
-        if (genreIds && genreIds.length > 0) {
-            const genres = await Genre.findAll({ where: { id: genreIds } });
-            if (genres.length !== genreIds.length) {
-                throw new AppError(404, "Một hoặc nhiều thể loại không tồn tại");
+            if (!title || !duration || !release_date) {
+                throw new AppError(400, "Vui lòng cung cấp tiêu đề, thời lượng và ngày khởi chiếu");
             }
-            await newMovie.setGenres(genreIds, { transaction });
-        }
 
-        await transaction.commit();
+            if (isNaN(duration) || duration <= 0) {
+                throw new AppError(400, "Thời lượng phim phải là số dương");
+            }
+
+            if (genreIds && !Array.isArray(genreIds)) {
+                throw new AppError(400, "Danh sách thể loại (genreIds) phải là một mảng");
+            }
+
+            const newMovie = await Movie.create(
+                { ...movieData, title, duration, release_date },
+                { transaction: t }
+            );
+
+            if (genreIds && genreIds.length > 0) {
+                const genres = await Genre.findAll({ 
+                    where: { id: genreIds },
+                    transaction: t 
+                });
+                
+                if (genres.length !== genreIds.length) {
+                    throw new AppError(404, "Một hoặc nhiều thể loại không tồn tại");
+                }
+                await newMovie.setGenres(genreIds, { transaction: t });
+            }
+
+            return newMovie;
+        });
+
         return res.status(201).json({
             success: true,
             message: 'Thêm phim mới thành công',
-            data: newMovie,
+            data: result,
         });
     } catch (error) {
-        await transaction.rollback();
         next(error);
     }
 };
 
 const updateMovie = async (req, res, next) => {
-    const transaction = await sequelize.transaction();
     try {
-        const { id } = req.params;
-        const { genreIds, duration, ...updateData } = req.body;
+        const result = await sequelize.transaction(async (t) => {
+            const { id } = req.params;
+            const { genreIds, duration, ...updateData } = req.body;
 
-        if (isNaN(id)) throw new AppError(400, "ID phim không hợp lệ");
+            if (isNaN(id)) throw new AppError(400, "ID phim không hợp lệ");
 
-        const movie = await Movie.findOne({ where: { id, is_deleted: false } });
-        if (!movie) throw new AppError(404, "Không tìm thấy phim");
+            const movie = await Movie.findOne({ 
+                where: { id, is_deleted: false },
+                transaction: t 
+            });
+            
+            if (!movie) throw new AppError(404, "Không tìm thấy phim");
 
-        if (duration !== undefined && (isNaN(duration) || duration <= 0)) {
-            throw new AppError(400, "Thời lượng phim phải là số dương");
-        }
-
-        if (genreIds && !Array.isArray(genreIds)) {
-            throw new AppError(400, "genreIds phải là một mảng");
-        }
-
-        await movie.update({ ...updateData, duration }, { transaction });
-
-        if (genreIds) {
-            const genres = await Genre.findAll({ where: { id: genreIds } });
-            if (genres.length !== genreIds.length) {
-                throw new AppError(404, "Một hoặc nhiều thể loại không tồn tại");
+            if (duration !== undefined && (isNaN(duration) || duration <= 0)) {
+                throw new AppError(400, "Thời lượng phim phải là số dương");
             }
-            await movie.setGenres(genreIds, { transaction });
-        }
 
-        await transaction.commit();
-        
-        const updatedMovie = await Movie.findByPk(id, {
-            include: [{ model: Genre, as: 'genres', through: { attributes: [] } }]
+            if (genreIds && !Array.isArray(genreIds)) {
+                throw new AppError(400, "genreIds phải là một mảng");
+            }
+
+            await movie.update({ ...updateData, duration }, { transaction: t });
+
+            if (genreIds) {
+                const genres = await Genre.findAll({ 
+                    where: { id: genreIds },
+                    transaction: t 
+                });
+                
+                if (genres.length !== genreIds.length) {
+                    throw new AppError(404, "Một hoặc nhiều thể loại không tồn tại");
+                }
+                await movie.setGenres(genreIds, { transaction: t });
+            }
+
+            return await Movie.findByPk(id, {
+                include: [{ model: Genre, as: 'genres', through: { attributes: [] } }],
+                transaction: t
+            });
         });
 
         return res.status(200).json({
             success: true,
             message: 'Cập nhật phim thành công',
-            data: updatedMovie,
+            data: result,
         });
     } catch (error) {
-        await transaction.rollback();
         next(error);
     }
 };
 
 const deleteMovie = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        if (isNaN(id)) throw new AppError(400, "ID phim không hợp lệ");
+        await sequelize.transaction(async (t) => {
+            const { id } = req.params;
+            if (isNaN(id)) throw new AppError(400, "ID phim không hợp lệ");
 
-        const movie = await Movie.findOne({ where: { id, is_deleted: false } });
-        if (!movie) throw new AppError(404, "Không tìm thấy phim");
+            const movie = await Movie.findOne({ 
+                where: { id, is_deleted: false },
+                transaction: t 
+            });
+            
+            if (!movie) throw new AppError(404, "Không tìm thấy phim");
 
-        await movie.update({
-            is_deleted: true,
-            updated_by: req.user?.id || null,
+            await movie.update({
+                is_deleted: true,
+                updated_by: req.user?.id || null,
+            }, { transaction: t });
         });
 
         return res.status(200).json({

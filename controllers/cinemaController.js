@@ -1,3 +1,4 @@
+const sequelize = require('../config/database');
 const Cinema = require("../models/Cinema");
 const Province = require("../models/Province");
 const AppError = require("../utils/appError");
@@ -67,27 +68,31 @@ const getCinemasForAdmin = async (req, res, next) => {
 
 const addCinema = async (req, res, next) => {
     try {
-        const { name, address, province_id, phone } = req.body;
+        const result = await sequelize.transaction(async (t) => {
+            const { name, address, province_id, phone } = req.body;
 
-        if (!name || !address || !province_id) {
-            throw new AppError(400, "Thiếu thông tin rạp bắt buộc");
-        }
+            if (!name || !address || !province_id) {
+                throw new AppError(400, "Thiếu thông tin rạp bắt buộc");
+            }
 
-        if (phone && !/^[0-9]{10}$/.test(phone)) {
-            throw new AppError(400, "Số điện thoại không hợp lệ");
-        }
+            if (phone && !/^[0-9]{10}$/.test(phone)) {
+                throw new AppError(400, "Số điện thoại không hợp lệ");
+            }
 
-        const province = await Province.findByPk(province_id);
-        if (!province) throw new AppError(404, "Tỉnh thành không tồn tại");
+            const province = await Province.findByPk(province_id, { transaction: t });
+            if (!province) throw new AppError(404, "Tỉnh thành không tồn tại");
 
-        const newCinema = await Cinema.create({
-            ...req.body,
-            updated_by: req.user.id
+            const newCinema = await Cinema.create({
+                ...req.body,
+                updated_by: req.user.id
+            }, { transaction: t });
+
+            return newCinema;
         });
 
         return res.status(201).json({
             success: true,
-            data: newCinema
+            data: result
         });
     } catch (error) {
         next(error);
@@ -96,31 +101,35 @@ const addCinema = async (req, res, next) => {
 
 const updateCinema = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        const { province_id, phone } = req.body;
+        const result = await sequelize.transaction(async (t) => {
+            const { id } = req.params;
+            const { province_id, phone } = req.body;
 
-        if (isNaN(id)) throw new AppError(400, "ID rạp không hợp lệ");
+            if (isNaN(id)) throw new AppError(400, "ID rạp không hợp lệ");
 
-        const cinema = await Cinema.findByPk(id);
-        if (!cinema) throw new AppError(404, "Không tìm thấy rạp");
+            const cinema = await Cinema.findByPk(id, { transaction: t });
+            if (!cinema) throw new AppError(404, "Không tìm thấy rạp");
 
-        if (province_id) {
-            const province = await Province.findByPk(province_id);
-            if (!province) throw new AppError(404, "Tỉnh thành không tồn tại");
-        }
+            if (province_id) {
+                const province = await Province.findByPk(province_id, { transaction: t });
+                if (!province) throw new AppError(404, "Tỉnh thành không tồn tại");
+            }
 
-        if (phone && !/^[0-9]{10}$/.test(phone)) {
-            throw new AppError(400, "Số điện thoại không hợp lệ");
-        }
+            if (phone && !/^[0-9]{10}$/.test(phone)) {
+                throw new AppError(400, "Số điện thoại không hợp lệ");
+            }
 
-        await cinema.update({
-            ...req.body,
-            updated_by: req.user.id
+            await cinema.update({
+                ...req.body,
+                updated_by: req.user.id
+            }, { transaction: t });
+
+            return cinema;
         });
 
         return res.status(200).json({
             success: true,
-            data: cinema
+            data: result
         });
     } catch (error) {
         next(error);
@@ -129,15 +138,17 @@ const updateCinema = async (req, res, next) => {
 
 const deleteCinema = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        if (isNaN(id)) throw new AppError(400, "ID rạp không hợp lệ");
+        await sequelize.transaction(async (t) => {
+            const { id } = req.params;
+            if (isNaN(id)) throw new AppError(400, "ID rạp không hợp lệ");
 
-        const cinema = await Cinema.findByPk(id);
-        if (!cinema) throw new AppError(404, "Không tìm thấy rạp");
+            const cinema = await Cinema.findByPk(id, { transaction: t });
+            if (!cinema) throw new AppError(404, "Không tìm thấy rạp");
 
-        await cinema.update({
-            is_deleted: true,
-            updated_by: req.user.id
+            await cinema.update({
+                is_deleted: true,
+                updated_by: req.user.id
+            }, { transaction: t });
         });
 
         return res.status(200).json({

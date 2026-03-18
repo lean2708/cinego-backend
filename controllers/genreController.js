@@ -1,9 +1,12 @@
 const Genre = require('../models/Genre');
+const sequelize = require('../config/database');
+const AppError = require('../utils/appError');
+
 const getAllGenres = async (req, res, next) => {
     try {
-        console.log('[getAllGenres]');
         const genres = await Genre.findAll({
             where: { is_deleted: false },
+            order: [['name', 'ASC']]
         });
 
         return res.status(200).json({
@@ -12,14 +15,15 @@ const getAllGenres = async (req, res, next) => {
             data: genres,
         });
     } catch (error) {
-        console.error('[getAllGenres] Error:', error.message);
         next(error);
     }
 };
+
 const getAllGenresForAdmin = async (req, res, next) => {
     try {
-        console.log('[getAdminAllGenres]');
-        const genres = await Genre.findAll();
+        const genres = await Genre.findAll({
+            order: [['is_deleted', 'ASC'], ['name', 'ASC']]
+        });
 
         return res.status(200).json({
             success: true,
@@ -27,22 +31,18 @@ const getAllGenresForAdmin = async (req, res, next) => {
             data: genres,
         });
     } catch (error) {
-        console.error('[getAdminAllGenres] Error:', error.message);
         next(error);
     }
 };
+
 const getGenreById = async (req, res, next) => {
     try {
         const { id } = req.params;
-        console.log('[getGenreById] id:', id);
-
         const genre = await Genre.findOne({
             where: { id, is_deleted: false },
         });
 
-        if (!genre) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy thể loại!' });
-        }
+        if (!genre) throw new AppError(404, 'Không tìm thấy thể loại!');
 
         return res.status(200).json({
             success: true,
@@ -50,67 +50,69 @@ const getGenreById = async (req, res, next) => {
             data: genre,
         });
     } catch (error) {
-        console.error('[getGenreById] Error:', error.message);
         next(error);
     }
 };
+
 const createGenre = async (req, res, next) => {
     try {
-        console.log('[createGenre] body:', req.body);
-        const newGenre = await Genre.create(req.body);
+        const result = await sequelize.transaction(async (t) => {
+            const newGenre = await Genre.create(req.body, { transaction: t });
+            return newGenre;
+        });
 
         return res.status(201).json({
             success: true,
             message: 'Thêm thể loại mới thành công',
-            data: newGenre,
+            data: result,
         });
     } catch (error) {
-        console.error('[createGenre] Error:', error.message);
         next(error);
     }
 };
+
 const updateGenre = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        console.log('[updateGenre] id:', id, '| body:', req.body);
+        const result = await sequelize.transaction(async (t) => {
+            const { id } = req.params;
+            const genre = await Genre.findOne({
+                where: { id, is_deleted: false },
+                transaction: t
+            });
 
-        const genre = await Genre.findOne({
-            where: { id, is_deleted: false },
+            if (!genre) throw new AppError(404, 'Không tìm thấy thể loại!');
+
+            await genre.update(req.body, { transaction: t });
+            return genre;
         });
-
-        if (!genre) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy thể loại!' });
-        }
-
-        await genre.update(req.body);
 
         return res.status(200).json({
             success: true,
             message: 'Cập nhật thể loại thành công',
-            data: genre,
+            data: result,
         });
     } catch (error) {
-        console.error('[updateGenre] Error:', error.message);
         next(error);
     }
 };
+
 const deleteGenre = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        console.log('[deleteGenre] id:', id);
+        await sequelize.transaction(async (t) => {
+            const { id } = req.params;
+            const updated_by = req.user?.id || req.body.updated_by;
 
-        const updated_by = req.user?.id || req.body.updated_by;
-        const genre = await Genre.findOne({
-            where: { id, is_deleted: false },
-        });
+            const genre = await Genre.findOne({
+                where: { id, is_deleted: false },
+                transaction: t
+            });
 
-        if (!genre) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy thể loại!' });
-        }
+            if (!genre) throw new AppError(404, 'Không tìm thấy thể loại!');
 
-        await genre.update({
-            is_deleted: true,
-            updated_by: updated_by || null,
+            await genre.update({
+                is_deleted: true,
+                updated_by: updated_by || null,
+            }, { transaction: t });
         });
 
         return res.status(200).json({
@@ -118,7 +120,6 @@ const deleteGenre = async (req, res, next) => {
             message: 'Đã xóa thể loại thành công',
         });
     } catch (error) {
-        console.error('[deleteGenre] Error:', error.message);
         next(error);
     }
 };

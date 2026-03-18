@@ -1,10 +1,11 @@
 const Contact = require("../models/Contact");
 const AppError = require("../utils/appError");
 const { sendContactReplyEmail } = require("../utils/sendEmail");
-
+const sequelize = require("../config/database");
 
 
 const createContact = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
 
         const { senderName, email, subject, message } = req.body;
@@ -20,7 +21,9 @@ const createContact = async (req, res, next) => {
             email,
             subject,
             message
-        });
+        }, { transaction });
+
+        await transaction.commit();
 
         console.log("Create contact successfully:", newContact.id);
 
@@ -33,6 +36,7 @@ const createContact = async (req, res, next) => {
         });
 
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 };
@@ -106,6 +110,7 @@ const getAllContacts = async (req, res, next) => {
 
 // ADMIN phản hồi contact
 const replyContact = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
   try {
 
     const contactId = req.params.id;
@@ -132,7 +137,9 @@ const replyContact = async (req, res, next) => {
     contact.status = "PROCESSING";
     contact.repliedBy = admin.id;
 
-    await contact.save();
+    await contact.save({ transaction });
+
+    await transaction.commit();
 
     console.log(`Contact replied successfully | contactId: ${contactId}`);
 
@@ -145,6 +152,7 @@ const replyContact = async (req, res, next) => {
     });
 
   } catch (error) {
+    await transaction.rollback();
     next(error);
   }
 };
@@ -152,6 +160,7 @@ const replyContact = async (req, res, next) => {
 
 
 const resolveContact = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
 
         const contactId = req.params.id;
@@ -166,7 +175,9 @@ const resolveContact = async (req, res, next) => {
 
         contact.status = "RESOLVED";
 
-        await contact.save();
+        await contact.save({ transaction });
+
+        await transaction.commit();
 
         console.log(`Contact resolved successfully | contactId: ${contactId}`);
 
@@ -179,6 +190,7 @@ const resolveContact = async (req, res, next) => {
         });
 
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 };
@@ -187,6 +199,7 @@ const resolveContact = async (req, res, next) => {
 
 // ADMIN xoá contact
 const deleteContact = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
 
         const contactId = req.params.id;
@@ -201,7 +214,9 @@ const deleteContact = async (req, res, next) => {
 
         contact.is_deleted = true;
 
-        await contact.save();
+        await contact.save({ transaction });
+
+        await transaction.commit();
 
         console.log("Soft delete contact:", contactId, " successfully");
 
@@ -211,6 +226,7 @@ const deleteContact = async (req, res, next) => {
         });
 
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 };

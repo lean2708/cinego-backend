@@ -6,7 +6,6 @@ const Showtime = require("../models/Showtime");
 const AppError = require("../utils/appError");
 
 
-
 const CLEANUP_MINUTES = 30;
 
 
@@ -95,16 +94,13 @@ const createShowtime = async (req, res, next) => {
         );
       }
 
-      const showtime = await Showtime.create(
-        {
-          movie_id,
-          room_id,
-          start_time: startTime,
-          end_time: endTime,
-          base_price
-        },
-        { transaction }
-      );
+      const showtime = await Showtime.create({
+        movie_id,
+        room_id,
+        start_time: startTime,
+        end_time: endTime,
+        base_price
+      },{ transaction });
 
       createdShowtimes.push(showtime);
     }
@@ -117,6 +113,157 @@ const createShowtime = async (req, res, next) => {
       data: {
         showtimes: createdShowtimes
       }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+
+
+const updateShowtime = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { id } = req.params;
+    const { movie_id, room_id, start_time, base_price } = req.body;
+
+    if (isNaN(id)) {
+      throw new AppError(400, "Invalid showtime id");
+    }
+
+    const showtime = await Showtime.findOne({
+      where: {
+        id,
+        is_deleted: false
+      },
+      transaction
+    });
+
+    if (!showtime) {
+      throw new AppError(404, "Showtime not found");
+    }
+
+    const nextMovieId = movie_id ?? showtime.movie_id;
+    const nextRoomId = room_id ?? showtime.room_id;
+    const nextBasePrice = base_price ?? showtime.base_price;
+    const nextStartTime = start_time ? new Date(start_time) : new Date(showtime.start_time);
+
+    if (isNaN(nextStartTime.getTime())) {
+      throw new AppError(400, "Invalid start_time");
+    }
+
+    const movie = await Movie.findOne({
+      where: {
+        id: nextMovieId,
+        is_deleted: false
+      },
+      transaction
+    });
+
+    if (!movie) {
+      throw new AppError(404, "Movie not found");
+    }
+
+    const room = await CinemaRoom.findOne({
+      where: {
+        id: nextRoomId,
+        is_deleted: false
+      }
+    });
+
+    if (!room) {
+      throw new AppError(404, "Cinema room not found");
+    }
+
+    const nextEndTime = new Date(
+      nextStartTime.getTime() +
+        (movie.duration + CLEANUP_MINUTES) * 60 * 1000
+    );
+
+    const conflict = await Showtime.findOne({
+      where: {
+        id: {
+          [Op.ne]: id
+        },
+        room_id: nextRoomId,
+        is_deleted: false,
+        start_time: {
+          [Op.lt]: nextEndTime
+        },
+        end_time: {
+          [Op.gt]: nextStartTime
+        }
+      },
+      transaction
+    });
+
+    if (conflict) {
+      throw new AppError(
+        409,
+        `Showtime conflict with existing showtime ID ${conflict.id}`
+      );
+    }
+
+    await showtime.update({
+        movie_id: nextMovieId,
+        room_id: nextRoomId,
+        start_time: nextStartTime,
+        end_time: nextEndTime,
+        base_price: nextBasePrice,
+        updated_by: req.user?.id || null
+    },{ transaction });
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: "Update showtime successfully",
+      data: {
+        showtime
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+
+
+const deleteShowtime = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { id } = req.params;
+
+    if (isNaN(id)) {
+      throw new AppError(400, "Invalid showtime id");
+    }
+
+    const showtime = await Showtime.findOne({
+      where: {
+        id,
+        is_deleted: false
+      },
+      transaction
+    });
+
+    if (!showtime) {
+      throw new AppError(404, "Showtime not found");
+    }
+
+    await showtime.update({
+        is_deleted: true,
+        updated_by: req.user?.id || null
+    },{ transaction });
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: "Delete showtime successfully"
     });
   } catch (error) {
     await transaction.rollback();
@@ -142,6 +289,9 @@ const getShowtimesByMovieCinemaDate = async (req, res, next) => {
     const endOfDay = new Date(`${date}T23:59:59`);
 
     const showtimes = await Showtime.findAll({
+      attributes: {
+        exclude: ["room_id", "movie_id"] 
+      },
       where: {
         movie_id,
         is_deleted: false,
@@ -152,6 +302,7 @@ const getShowtimesByMovieCinemaDate = async (req, res, next) => {
       include: [
         {
           model: CinemaRoom,
+          as: "room",
           where: {
             cinema_id,
             is_deleted: false
@@ -160,6 +311,7 @@ const getShowtimesByMovieCinemaDate = async (req, res, next) => {
         },
         {
           model: Movie,
+          as: "movie",
           attributes: ["id", "title", "duration"]
         }
       ],
@@ -182,5 +334,7 @@ const getShowtimesByMovieCinemaDate = async (req, res, next) => {
 
 module.exports = {
   createShowtime,
+  updateShowtime,
+  deleteShowtime,
   getShowtimesByMovieCinemaDate
 };

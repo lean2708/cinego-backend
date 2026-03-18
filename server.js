@@ -28,6 +28,7 @@ app.use(rootRouter);
 app.use(errorHandler);
 
 
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 const initializeAssociations = require('./models/associations');
 initializeAssociations();

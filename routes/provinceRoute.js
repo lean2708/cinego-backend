@@ -27,13 +27,18 @@ const router = express.Router();
  *       - Provinces
  *     summary: Create a new province
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ProvinceInput'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: 'Hanoi'
+ *             required: [name]
  *     responses:
  *       201:
  *         description: Created
@@ -47,7 +52,26 @@ const router = express.Router();
  *                 message:
  *                   type: string
  *                 data:
- *                   $ref: '#/components/schemas/Province'
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     name:
+ *                       type: string
+ *                       example: 'Hanoi'
+ *                     is_deleted:
+ *                       type: boolean
+ *                       example: false
+ *                     updated_by:
+ *                       type: integer
+ *                       example: 1
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       400:
  *         description: Bad Request
  *       401:
@@ -65,7 +89,7 @@ router.post("/", authToken, isAdmin, addProvince);
  *       - Provinces
  *     summary: Update a province
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -77,7 +101,12 @@ router.post("/", authToken, isAdmin, addProvince);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ProvinceInput'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: 'Hanoi'
+ *             required: [name]
  *     responses:
  *       200:
  *         description: Updated
@@ -91,7 +120,26 @@ router.post("/", authToken, isAdmin, addProvince);
  *                 message:
  *                   type: string
  *                 data:
- *                   $ref: '#/components/schemas/Province'
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     name:
+ *                       type: string
+ *                       example: 'Hanoi'
+ *                     is_deleted:
+ *                       type: boolean
+ *                       example: false
+ *                     updated_by:
+ *                       type: integer
+ *                       example: 1
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       401:
  *         description: Unauthorized
  *       403:
@@ -109,7 +157,7 @@ router.patch("/:id", authToken, isAdmin, updateProvince);
  *       - Provinces
  *     summary: Soft-delete a province
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -159,7 +207,26 @@ router.delete("/:id", authToken, isAdmin, deleteProvince);
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Province'
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: 'Hanoi'
+ *                       is_deleted:
+ *                         type: boolean
+ *                         example: false
+ *                       updated_by:
+ *                         type: integer
+ *                         example: 1
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       updated_at:
+ *                         type: string
+ *                         format: date-time
  */
 router.get("/", getAllProvinces);
 /**
@@ -170,7 +237,7 @@ router.get("/", getAllProvinces);
  *       - Provinces
  *     summary: Retrieve all provinces (admin)
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: A list of provinces
@@ -186,7 +253,26 @@ router.get("/", getAllProvinces);
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Province'
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: 'Hanoi'
+ *                       is_deleted:
+ *                         type: boolean
+ *                         example: false
+ *                       updated_by:
+ *                         type: integer
+ *                         example: 1
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       updated_at:
+ *                         type: string
+ *                         format: date-time
  *       401:
  *         description: Unauthorized
  *       403:

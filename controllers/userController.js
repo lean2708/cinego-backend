@@ -2,12 +2,14 @@ const User = require("../models/User");
 const AppError = require("../utils/appError");
 const bcrypt = require("bcryptjs");
 const { Op } = require("sequelize");
-
+const sequelize = require("../config/database");
 
 
 
 const createUser = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
+
         const {full_name, email, phone, password, role} = req.body;
 
         console.log("Received a request to create user");
@@ -35,9 +37,11 @@ const createUser = async (req, res, next) => {
             phone,
             password_hash : hashedPassword,
             role : role
-        });
+        },{ transaction });
 
         newUser.password_hash = undefined;
+
+        await transaction.commit();
 
         console.log("Create user:", newUser.id," successfully");
 
@@ -51,6 +55,7 @@ const createUser = async (req, res, next) => {
 
         
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 }
@@ -119,6 +124,7 @@ const getAllUsers = async (req, res, next) => {
 
 
 const updateUser = async(req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
         console.log("Recieved a request to update user:", req.params.id);
         
@@ -135,7 +141,9 @@ const updateUser = async(req, res, next) => {
         user.dob = dob || user.dob;
         user.phone = phone || user.phone;
 
-        await user.save();
+        await user.save({ transaction });
+
+        await transaction.commit();
 
         console.log("Update user:", req.params.id, " successfully");
 
@@ -148,6 +156,7 @@ const updateUser = async(req, res, next) => {
         })
         
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 }
@@ -155,6 +164,7 @@ const updateUser = async(req, res, next) => {
 
 
 const deleteUser = async (req, res, next) => {
+    const transaction = await sequelize.transaction();
     try {
         const userToDeleteId = req.params.id;
 
@@ -175,7 +185,9 @@ const deleteUser = async (req, res, next) => {
         await userToDelete.update({
             is_deleted: true,
             updated_by: loggedInUser.id
-        });
+        },{ transaction });
+        
+        await transaction.commit();
 
         console.log("Soft delete user:", userToDeleteId, " successfully");
 
@@ -185,6 +197,7 @@ const deleteUser = async (req, res, next) => {
         });
 
     } catch (error) {
+        await transaction.rollback();
         next(error);
     }
 };

@@ -2,8 +2,10 @@ const { Op } = require("sequelize");
 const Voucher = require("../models/Voucher");
 const UserVoucherUsage = require("../models/UserVoucherUsage");
 const AppError = require("../utils/appError");
+const sequelize = require("../config/database");
 
 const createVoucher = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
   try {
 
     console.log("Received request to create voucher");
@@ -31,7 +33,9 @@ const createVoucher = async (req, res, next) => {
       end_date,
       usage_limit,
       is_active: is_active ?? true
-    });
+    },{ transaction });
+
+    await transaction.commit();
 
     console.log("Create voucher:", voucher.id, "successfully");
 
@@ -42,6 +46,7 @@ const createVoucher = async (req, res, next) => {
     });
 
   } catch (error) {
+    await transaction.rollback();
     next(error);
   }
 };
@@ -225,6 +230,7 @@ const getMyVouchers = async (req, res, next) => {
 
 
 const updateVoucher = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
   try {
     const voucherId = req.params.id;
 
@@ -246,7 +252,9 @@ const updateVoucher = async (req, res, next) => {
     voucher.usage_limit = usage_limit ?? voucher.usage_limit;
     voucher.is_active = is_active ?? voucher.is_active;
 
-    await voucher.save();
+    await voucher.save({ transaction });
+
+    await transaction.commit();
 
     console.log("Update voucher:", voucherId, "successfully");
 
@@ -257,12 +265,14 @@ const updateVoucher = async (req, res, next) => {
     });
 
   } catch (error) {
+    await transaction.rollback();
     next(error);
   }
 };
 
 
 const deleteVoucher = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
   try {
 
     const voucherId = req.params.id;
@@ -277,9 +287,11 @@ const deleteVoucher = async (req, res, next) => {
 
     await voucher.update({
       is_deleted: true
-    });
+    }, { transaction });
 
     console.log("Soft delete voucher:", voucherId, "successfully");
+
+    await transaction.commit();
 
     return res.status(200).json({
       success: true,
@@ -287,6 +299,7 @@ const deleteVoucher = async (req, res, next) => {
     });
 
   } catch (error) {
+    await transaction.rollback();
     next(error);
   }
 };

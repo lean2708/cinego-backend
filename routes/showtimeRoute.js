@@ -1,5 +1,5 @@
 const express = require("express");
-const { createShowtime } = require("../controllers/showtimeController");
+const { createShowtime, getShowtimesByMovieCinemaDate } = require("../controllers/showtimeController");
 const { isAdmin, authToken } = require("../middlewares/authToken");
 const router = express.Router();
 
@@ -61,5 +61,37 @@ const router = express.Router();
 router.post("/", authToken, isAdmin, createShowtime);
 
 
+
+/**
+ * @swagger
+ * /showtimes/filter:
+ *   get:
+ *     summary: Get showtimes by movie, cinema and date
+ *     tags: [Showtimes]
+ *     parameters:
+ *       - in: query
+ *         name: movie_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *       - in: query
+ *         name: cinema_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         example: 2
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         example: 2026-03-20
+ *     responses:
+ *       200:
+ *         description: List showtimes
+ */
+router.get("/filter", getShowtimesByMovieCinemaDate);
 
 module.exports = router;

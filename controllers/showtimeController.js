@@ -124,6 +124,63 @@ const createShowtime = async (req, res, next) => {
   }
 };
 
+
+
+const getShowtimesByMovieCinemaDate = async (req, res, next) => {
+  try {
+    const { movie_id, cinema_id, date } = req.query;
+
+    if (!movie_id || !cinema_id || !date) {
+      throw new AppError(
+        400,
+        "movie_id, cinema_id and date are required"
+      );
+    }
+
+    // xác định thời gian đầu ngày và cuối ngày
+    const startOfDay = new Date(`${date}T00:00:00`);
+    const endOfDay = new Date(`${date}T23:59:59`);
+
+    const showtimes = await Showtime.findAll({
+      where: {
+        movie_id,
+        is_deleted: false,
+        start_time: {
+          [Op.between]: [startOfDay, endOfDay]
+        }
+      },
+      include: [
+        {
+          model: CinemaRoom,
+          where: {
+            cinema_id,
+            is_deleted: false
+          },
+          attributes: ["id", "name"]
+        },
+        {
+          model: Movie,
+          attributes: ["id", "title", "duration"]
+        }
+      ],
+      order: [["start_time", "ASC"]]
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        showtimes
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 module.exports = {
-  createShowtime
+  createShowtime,
+  getShowtimesByMovieCinemaDate
 };

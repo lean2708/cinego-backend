@@ -1,5 +1,6 @@
 const sequelize = require('../config/database');
 const Cinema = require("../models/Cinema");
+const CinemaRoom = require('../models/CinemaRoom');
 const Province = require("../models/Province");
 const AppError = require("../utils/appError");
 
@@ -65,6 +66,50 @@ const getCinemasForAdmin = async (req, res, next) => {
         next(error);
     }
 };
+
+const getRoomsByCinema = async (req, res, next) => {
+    try {
+        const { cinema_id } = req.params;
+
+        if (isNaN(cinema_id)) {
+            throw new AppError(400, "cinema_id không hợp lệ");
+        }
+
+        const cinema = await Cinema.findOne({
+            where: {
+                id: cinema_id,
+                is_deleted: false
+            },
+            include: [
+                {
+                    model: Province,
+                    as: 'province',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: CinemaRoom,
+                    as: 'rooms',
+                    where: { is_deleted: false },
+                    required: false,
+                    attributes: ['id', 'name']
+                }
+            ]
+        });
+
+        if (!cinema) {
+            throw new AppError(404, "Không tìm thấy rạp");
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: cinema
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 const addCinema = async (req, res, next) => {
     try {
@@ -193,5 +238,6 @@ module.exports = {
     deleteCinema,
     getCinemasForUser,
     getCinemasForAdmin,
-    getCinemaById
+    getCinemaById,
+    getRoomsByCinema
 };

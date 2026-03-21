@@ -5,7 +5,8 @@ const {
     deleteCinema,
     getCinemasForUser,
     getCinemasForAdmin,
-    getCinemaById
+    getCinemaById,
+    getRoomsByCinema
 } = require('../controllers/cinemaController');
 const { authToken, isAdmin } = require('../middlewares/authToken');
 const router = express.Router();
@@ -154,6 +155,28 @@ router.get('/admin', authToken, isAdmin, getCinemasForAdmin);
  *         description: Get cinemas successfully
  */
 router.get('/', getCinemasForUser);
+
+
+/**
+ * @swagger
+ * /cinemas/{cinema_id}/rooms:
+ *   get:
+ *     summary: Get list rooms of a cinema
+ *     tags: [Cinemas]
+ *     parameters:
+ *       - in: path
+ *         name: cinema_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Get rooms successfully
+ *       404:
+ *         description: Cinema not found
+ */
+router.get('/:cinema_id/rooms', getRoomsByCinema);
 
 /**
  * @swagger

@@ -10,6 +10,7 @@ const Showtime = require("../models/Showtime");
 const Ticket = require("../models/Ticket");
 const UserVoucherUsage = require("../models/UserVoucherUsage");
 const Voucher = require("../models/Voucher");
+const { generateQRCode } = require("../utils/qrCodeHelper");
 
 
 
@@ -318,8 +319,45 @@ const getOrderDetailById = async (req, res, next) => {
 };
 
 
+const checkInAllTickets = async (req, res, next) => {
+    try {
+        const { booking_code } = req.body;
+
+        const order = await Order.findOne({
+            where: { booking_code },
+            include: [{ model: Ticket, as: 'tickets' }]
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+        }
+
+        let count = 0;
+
+        for (let ticket of order.tickets) {
+            if (!ticket.is_used) {
+                ticket.is_used = true;
+                await ticket.save();
+                count++;
+            }
+        }
+
+        return res.json({
+            success: true,
+            message: `Checked-in ${count} tickets`
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 module.exports = {
     getMyBookingHistory,
-    getOrderDetailById
+    getOrderDetailById,
+    checkInAllTickets
 }

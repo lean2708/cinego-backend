@@ -84,7 +84,7 @@ router.post("/", authToken, isAdmin, addProvince);
 /**
  * @swagger
  * /provinces/{id}:
- *   patch:
+ *   put:
  *     tags:
  *       - Provinces
  *     summary: Update a province
@@ -147,7 +147,7 @@ router.post("/", authToken, isAdmin, addProvince);
  *       404:
  *         description: Not Found
  */
-router.patch("/:id", authToken, isAdmin, updateProvince);
+router.put("/:id", authToken, isAdmin, updateProvince);
 
 /**
  * @swagger
@@ -192,6 +192,17 @@ router.delete("/:id", authToken, isAdmin, deleteProvince);
  *     tags:
  *       - Provinces
  *     summary: Retrieve all provinces
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: A list of provinces
@@ -238,6 +249,17 @@ router.get("/", getAllProvinces);
  *     summary: Retrieve all provinces (admin)
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: A list of provinces

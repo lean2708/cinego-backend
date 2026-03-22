@@ -4,15 +4,27 @@ const AppError = require('../utils/appError');
 
 const getAllGenres = async (req, res, next) => {
     try {
-        const genres = await Genre.findAll({
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
+
+        const { count, rows } = await Genre.findAndCountAll({
             where: { is_deleted: false },
-            order: [['name', 'ASC']]
+            order: [['name', 'ASC']],
+            limit: pageSize,
+            offset
         });
 
         return res.status(200).json({
             success: true,
             message: 'Lấy danh sách thể loại thành công',
-            data: genres,
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            },
         });
     } catch (error) {
         next(error);
@@ -21,14 +33,26 @@ const getAllGenres = async (req, res, next) => {
 
 const getAllGenresForAdmin = async (req, res, next) => {
     try {
-        const genres = await Genre.findAll({
-            order: [['is_deleted', 'ASC'], ['name', 'ASC']]
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
+
+        const { count, rows } = await Genre.findAndCountAll({
+            order: [['is_deleted', 'ASC'], ['name', 'ASC']],
+            limit: pageSize,
+            offset
         });
 
         return res.status(200).json({
             success: true,
             message: 'Lấy toàn bộ danh sách thể loại (Admin) thành công',
-            data: genres,
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            },
         });
     } catch (error) {
         next(error);

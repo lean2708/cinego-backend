@@ -73,7 +73,7 @@ router.post('/', authToken, isAdmin, createMovie);
 /**
  * @swagger
  * /movies/{id}:
- *   patch:
+ *   put:
  *     summary: Update movie (Admin only)
  *     tags: [Movies]
  *     security:
@@ -111,7 +111,7 @@ router.post('/', authToken, isAdmin, createMovie);
  *       404:
  *         description: Movie not found
  */
-router.patch('/:id', authToken, isAdmin, updateMovie);
+router.put('/:id', authToken, isAdmin, updateMovie);
 
 /**
  * @swagger
@@ -144,6 +144,17 @@ router.delete('/:id', authToken, isAdmin, deleteMovie);
  *     tags: [Movies]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: Get movies for admin successfully
@@ -156,6 +167,17 @@ router.get('/admin', authToken, isAdmin, getAllMoviesForAdmin);
  *   get:
  *     summary: Retrieve movies for User (only active)
  *     tags: [Movies]
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: Get movies successfully

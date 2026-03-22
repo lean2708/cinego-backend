@@ -7,6 +7,9 @@ const AppError = require("../utils/appError");
 const getCinemasForUser = async (req, res, next) => {
     try {
         const { province_id } = req.query;
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
 
         const filter = { is_deleted: false };
         if (province_id) {
@@ -14,20 +17,27 @@ const getCinemasForUser = async (req, res, next) => {
             filter.province_id = province_id;
         }
 
-        const cinemas = await Cinema.findAll({
+        const { count, rows } = await Cinema.findAndCountAll({
             where: filter,
             include: [{
                 model: Province,
                 as: 'province',
                 attributes: ['id', 'name']
             }],
-            order: [['name', 'ASC']]
+            order: [['name', 'ASC']],
+            limit: pageSize,
+            offset
         });
 
         return res.status(200).json({
             success: true,
-            results: cinemas.length,
-            data: cinemas
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            }
         });
     } catch (error) {
         next(error);
@@ -37,6 +47,9 @@ const getCinemasForUser = async (req, res, next) => {
 const getCinemasForAdmin = async (req, res, next) => {
     try {
         const { province_id } = req.query;
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
 
         const filter = {};
         if (province_id) {
@@ -44,7 +57,7 @@ const getCinemasForAdmin = async (req, res, next) => {
             filter.province_id = province_id;
         }
 
-        const cinemas = await Cinema.findAll({
+        const { count, rows } = await Cinema.findAndCountAll({
             where: filter,
             include: [{
                 model: Province,
@@ -54,13 +67,20 @@ const getCinemasForAdmin = async (req, res, next) => {
             order: [
                 ['is_deleted', 'ASC'],
                 ['name', 'ASC']
-            ]
+            ],
+            limit: pageSize,
+            offset
         });
 
         return res.status(200).json({
             success: true,
-            results: cinemas.length,
-            data: cinemas
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            }
         });
     } catch (error) {
         next(error);

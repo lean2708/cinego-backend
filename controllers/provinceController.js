@@ -82,15 +82,27 @@ const deleteProvince = async (req, res, next) => {
 
 const getAllProvinces = async (req, res, next) => {
     try {
-        const provinces = await province.findAll({
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
+
+        const { count, rows } = await province.findAndCountAll({
             where: { is_deleted: false },
-            order: [['name', 'ASC']]
+            order: [['name', 'ASC']],
+            limit: pageSize,
+            offset
         });
 
         return res.status(200).json({
             success: true,
-            results: provinces.length,
-            data: provinces
+            message: "Danh sách tỉnh/thành phố",
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            }
         });
     } catch (error) {
         next(error);
@@ -99,15 +111,26 @@ const getAllProvinces = async (req, res, next) => {
 
 const getAllProvincesForAdmin = async (req, res, next) => {
     try {
-        const provinces = await province.findAll({
-            order: [['is_deleted', 'ASC'], ['name', 'ASC']] 
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
+
+        const { count, rows } = await province.findAndCountAll({
+            order: [['is_deleted', 'ASC'], ['name', 'ASC']],
+            limit: pageSize,
+            offset
         });
 
         return res.status(200).json({
             success: true,
             message: "Danh sách đầy đủ cho quản trị viên",
-            results: provinces.length,
-            data: provinces
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            }
         });
     } catch (error) {
         next(error);

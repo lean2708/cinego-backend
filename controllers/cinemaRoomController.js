@@ -6,14 +6,30 @@ const AppError = require('../utils/appError');
 const getCinemaRooms = async (req, res, next) => {
   try {
     const { cinema_id } = req.query;
+    const pageNo = parseInt(req.query.pageNo) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const offset = (pageNo - 1) * pageSize;
+
     const filter = { is_deleted: false };
     if (cinema_id) filter.cinema_id = cinema_id;
 
-    const list = await CinemaRoom.findAll({ 
-      where: filter, 
-      order: [['name', 'ASC']] 
+    const { count, rows } = await CinemaRoom.findAndCountAll({
+      where: filter,
+      order: [['name', 'ASC']],
+      limit: pageSize,
+      offset
     });
-    return res.status(200).json({ success: true, results: list.length, data: list });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        pageNo,
+        pageSize,
+        totalPages: Math.ceil(count / pageSize),
+        totalItems: count,
+        items: rows
+      }
+    });
   } catch (error) {
     next(error);
   }

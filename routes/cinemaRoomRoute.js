@@ -12,6 +12,16 @@
  *         schema:
  *           type: integer
  *         description: Filter by cinema ID
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: Cinema room list returned
@@ -82,7 +92,7 @@
  *     responses:
  *       200:
  *         description: Cinema room details
- *   patch:
+ *   put:
  *     tags:
  *       - CinemaRoom
  *     summary: Update cinema room
@@ -139,7 +149,7 @@ const router = express.Router();
 router.get('/', getCinemaRooms);
 router.get('/:id', getCinemaRoomById);
 router.post('/', authToken, isAdmin, addCinemaRoom);
-router.patch('/:id', authToken, isAdmin, updateCinemaRoom);
+router.put('/:id', authToken, isAdmin, updateCinemaRoom);
 router.delete('/:id', authToken, isAdmin, deleteCinemaRoom);
 
 module.exports = router;

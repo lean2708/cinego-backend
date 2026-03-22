@@ -41,7 +41,7 @@ router.post('/', authToken, isAdmin, createGenre);
 /**
  * @swagger
  * /genres/{id}:
- *   patch:
+ *   put:
  *     summary: Update genre (Admin only)
  *     tags: [Genres]
  *     security:
@@ -71,7 +71,7 @@ router.post('/', authToken, isAdmin, createGenre);
  *       404:
  *         description: Genre not found
  */
-router.patch('/:id', authToken, isAdmin, updateGenre);
+router.put('/:id', authToken, isAdmin, updateGenre);
 
 /**
  * @swagger
@@ -104,6 +104,17 @@ router.delete('/:id', authToken, isAdmin, deleteGenre);
  *     tags: [Genres]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: Get genres for admin successfully
@@ -116,6 +127,17 @@ router.get('/admin', authToken, isAdmin, getAllGenresForAdmin);
  *   get:
  *     summary: Retrieve genres for User (only active)
  *     tags: [Genres]
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: Get genres successfully

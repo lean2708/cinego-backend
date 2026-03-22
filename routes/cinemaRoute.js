@@ -56,7 +56,7 @@ router.post('/', authToken, isAdmin, addCinema);
 /**
  * @swagger
  * /cinemas/{id}:
- *   patch:
+ *   put:
  *     summary: Update cinema (Admin only)
  *     tags: [Cinemas]
  *     security:
@@ -93,7 +93,7 @@ router.post('/', authToken, isAdmin, addCinema);
  *       404:
  *         description: Cinema not found
  */
-router.patch('/:id', authToken, isAdmin, updateCinema);
+router.put('/:id', authToken, isAdmin, updateCinema);
 
 /**
  * @swagger
@@ -132,6 +132,16 @@ router.delete('/:id', authToken, isAdmin, deleteCinema);
  *         schema:
  *           type: integer
  *         description: Filter by province
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: Get cinemas for admin successfully
@@ -150,6 +160,16 @@ router.get('/admin', authToken, isAdmin, getCinemasForAdmin);
  *         schema:
  *           type: integer
  *         description: Filter by province
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: Get cinemas successfully

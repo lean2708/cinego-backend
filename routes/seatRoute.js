@@ -137,7 +137,7 @@ router.route("/")
  *                   $ref: '#/components/schemas/Seat'
  *       404:
  *         description: Not Found
- *   patch:
+ *   put:
  *     tags:
  *       - Seats
  *     summary: Update a seat
@@ -196,7 +196,7 @@ router.route("/")
  */
 router.route("/:id")
     .get(seatController.getSeatById)
-    .patch(authToken, isAdmin, seatController.updateSeatById)
+    .put(authToken, isAdmin, seatController.updateSeatById)
     .delete(authToken, isAdmin, seatController.deleteSeatById);
 
 module.exports = router;

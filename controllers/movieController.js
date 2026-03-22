@@ -6,19 +6,32 @@ const AppError = require('../utils/appError');
 
 const getAllMovies = async (req, res, next) => {
     try {
-        const movies = await Movie.findAll({
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
+
+        const { count, rows } = await Movie.findAndCountAll({
             where: { is_deleted: false },
             include: [{
                 model: Genre,
                 as: 'genres',
                 through: { attributes: [] }
-            }]
+            }],
+            limit: pageSize,
+            offset,
+            order: [['created_at', 'DESC']]
         });
 
         return res.status(200).json({
             success: true,
             message: 'Lấy danh sách phim thành công',
-            data: movies,
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            },
         });
     } catch (error) {
         next(error);
@@ -27,19 +40,31 @@ const getAllMovies = async (req, res, next) => {
 
 const getAllMoviesForAdmin = async (req, res, next) => {
     try {
-        const movies = await Movie.findAll({
+        const pageNo = parseInt(req.query.pageNo) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const offset = (pageNo - 1) * pageSize;
+
+        const { count, rows } = await Movie.findAndCountAll({
             include: [{
                 model: Genre,
                 as: 'genres',
                 through: { attributes: [] }
             }],
+            limit: pageSize,
+            offset,
             order: [['is_deleted', 'ASC'], ['created_at', 'DESC']]
         });
 
         return res.status(200).json({
             success: true,
             message: 'Lấy toàn bộ danh sách phim (Admin) thành công',
-            data: movies,
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: rows
+            },
         });
     } catch (error) {
         next(error);

@@ -16,7 +16,7 @@ const router = express.Router();
  * @swagger
  * /orders/my-history:
  *   get:
- *     summary: Get my booking history
+ *     summary: Get my booking history (can filter by payment_status)
  *     tags: [Orders]
  *     security:
  *       - BearerAuth: []
@@ -26,11 +26,19 @@ const router = express.Router();
  *         schema:
  *           type: integer
  *         example: 1
+ *         description: Page number
  *       - in: query
  *         name: pageSize
  *         schema:
  *           type: integer
  *         example: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: order_status
+ *         schema:
+ *           type: string
+ *         example: "SUCCESS"
+ *         description: Filter orders by payment status (SUCCESS, PENDING, FAILED)
  *     responses:
  *       200:
  *         description: Get booking history successfully
@@ -38,26 +46,30 @@ const router = express.Router();
  *           application/json:
  *             example:
  *               success: true
- *               pageNo: 1
- *               pageSize: 10
- *               totalItems: 2
- *               totalPages: 1
+ *               message: "Get All Order History"
  *               data:
- *                 - order_id: 1
- *                   booking_code: "ABC123"
- *                   total_amount: 200000
- *                   payment_status: "SUCCESS"
- *                   tickets:
- *                     - movie_name: "Avengers"
- *                       genres: ["Action", "Sci-Fi"]
- *                       duration: 120
- *                       showtime: "2026-03-21T10:00:00Z"
- *                       seat: "A5"
- *                       ticket_code: "QR123"
- *                       room: "Room 1"
- *                       cinema: "CGV Vincom"
+ *                 pageNo: 1
+ *                 pageSize: 10
+ *                 totalItems: 2
+ *                 totalPages: 1
+ *                 items:
+ *                   - order_id: 1
+ *                     booking_code: "ABC123"
+ *                     total_amount: 200000
+ *                     payment_status: "SUCCESS"
+ *                     movie_name: "Avengers"
+ *                     genres: ["Action", "Sci-Fi"]
+ *                     duration: 120
+ *                     poster: "https://cdn.example.com/poster.jpg"
+ *                     showtime: "2026-03-21T10:00:00Z"
+ *                     room: "Room 1"
+ *                     cinema: "CGV Vincom"
+ *                     seats: ["A5"]
+ *                     ticket_codes: ["QR123"]
  *       401:
  *         description: Unauthorized
+ *       400:
+ *         description: Invalid payment_status
  */
 router.get('/my-history', authToken, getMyBookingHistory);
 

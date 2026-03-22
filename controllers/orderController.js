@@ -18,18 +18,24 @@ const { generateQRCode } = require("../utils/qrCodeHelper");
 const getMyBookingHistory = async (req, res, next) => {
     try {
         const userId = req.user.id;
-        let { pageNo = 1, pageSize = 10 } = req.query;
+        let { pageNo = 1, pageSize = 10, order_status } = req.query;
 
         pageNo = parseInt(pageNo);
         pageSize = parseInt(pageSize);
 
         const offset = (pageNo - 1) * pageSize;
 
+        const whereCondition = {
+            user_id: userId,
+            is_deleted: false
+        };
+
+        if (order_status) {
+            whereCondition.status = order_status;
+        }
+
         const { count, rows } = await Order.findAndCountAll({
-            where: {
-                user_id: userId,
-                is_deleted: false
-            },
+            where: whereCondition,
             include: [
                 {
                     model: Ticket,

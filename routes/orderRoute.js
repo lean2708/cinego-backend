@@ -1,4 +1,4 @@
-const { getMyBookingHistory, getOrderDetailById } = require("../controllers/orderController");
+const { getMyBookingHistory, getOrderDetailById, checkInAllTickets } = require("../controllers/orderController");
 const { authToken } = require("../middlewares/authToken");
 const express = require("express");
 
@@ -121,5 +121,31 @@ router.get('/my-history', authToken, getMyBookingHistory);
  */
 router.get("/:id", authToken, getOrderDetailById);
 
+
+/**
+ * @swagger
+ * /orders/check-in:
+ *   post:
+ *     summary: Check-in all tickets by booking_code (scan QR)
+ *     tags: [Orders]
+ *     description: Quét QR hoặc nhập booking_code để check-in toàn bộ vé trong đơn
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             booking_code: "BK20260322001"
+ *     responses:
+ *       200:
+ *         description: Check-in success
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: "Checked-in 3 tickets"
+ *       404:
+ *         description: Order not found
+ */
+router.post("/check-in", checkInAllTickets);
 
 module.exports = router;

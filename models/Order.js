@@ -81,11 +81,6 @@ const Order = sequelize.define('Order', {
             isDate: { msg: 'Thời gian thanh toán không hợp lệ' },
         },
     },
-    is_used: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-    },
     is_deleted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

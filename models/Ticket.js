@@ -41,6 +41,11 @@ const Ticket = sequelize.define('Ticket', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    is_used: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
     is_deleted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

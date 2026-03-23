@@ -3,8 +3,10 @@ const AppError = require("../utils/appError");
 const bcrypt = require("bcryptjs");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
+const { uploadToCloudinary } = require("../utils/uploadFile");
 
 
+const rootFolder = process.env.CLOUDINARY_FOLDER_NAME;
 
 const createUser = async (req, res, next) => {
     const transaction = await sequelize.transaction();
@@ -203,10 +205,55 @@ const deleteUser = async (req, res, next) => {
 };
 
 
+
+const uploadAvatar = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        console.log("Received a request to upload avatar for userId:"+ userId);
+
+        if (!req.file) {
+            throw new AppError(400, "Please upload an image file");
+        }
+
+        if (!req.file.mimetype.startsWith('image/')) {
+            throw new AppError(400, "File is not an image");
+        }
+
+       const folderName = `${rootFolder}/images`;
+        
+        const result = await uploadToCloudinary(req.file.buffer, folderName, 'image');
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            throw new AppError(404, "User not found");
+        }
+
+        user.image_url = result.secure_url;
+        await user.save();
+
+        console.log("Avatar updated successfully for userId: " + userId + ". URL: " + result.secure_url);
+
+        return res.status(200).json({
+            success: true,
+            message: "Update avatar successfully",
+            data: {
+                imageUrl: user.image_url
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+
+
 module.exports = {
     createUser,
     getUserById,
     getAllUsers,
     updateUser,
-    deleteUser
+    deleteUser,
+    uploadAvatar
 }

@@ -4,10 +4,12 @@ const {
     getUserById,
     getAllUsers,
     updateUser,
-    deleteUser
+    deleteUser,
+    uploadAvatar
 } = require("../controllers/userController");
 
 const { authToken, isAdmin } = require("../middlewares/authToken");
+const upload = require("../middlewares/uploadMiddleware");
 
 const router = express.Router();
 
@@ -114,6 +116,46 @@ router.get("/", authToken, isAdmin, getAllUsers);
  *         description: User not found
  */
 router.get("/:id", authToken, getUserById);
+
+
+
+/**
+ * @swagger
+ * /users/avatar:
+ *   put:
+ *     summary: Upload or update user avatar
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       example: "https://example.com/uploads/avatar.jpg"
+ */
+router.put("/avatar", authToken, upload.single("avatar"), uploadAvatar);
+
 
 
 /**

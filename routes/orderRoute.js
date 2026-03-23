@@ -1,5 +1,5 @@
-const { getMyBookingHistory, getOrderDetailById, checkInAllTickets } = require("../controllers/orderController");
-const { authToken } = require("../middlewares/authToken");
+const { getMyBookingHistory, getOrderDetailById, checkInAllTickets, getAllOrders } = require("../controllers/orderController");
+const { authToken, isAdmin } = require("../middlewares/authToken");
 const express = require("express");
 
 
@@ -8,9 +8,46 @@ const router = express.Router();
 /**
  * @swagger
  * tags:
- *   name: Orders
- *   description: Order / Booking APIs
+ *   - name: Orders
+ *     description: Order / Booking APIs
  */
+
+
+
+/**
+ * @swagger
+ * /orders/admin:
+ *   get:
+ *     summary: Get all orders in system (admin only, can filter by order_status)
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *         description: Page number
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         example: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: order_status
+ *         schema:
+ *           type: string
+ *         description: Filter orders by payment status (SUCCESS, PENDING, FAILED)
+ *     responses:
+ *       200:
+ *         description: List of all orders
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/admin", authToken, isAdmin, getAllOrders);
+
 
 /**
  * @swagger

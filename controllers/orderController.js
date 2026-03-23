@@ -15,6 +15,119 @@ const { generateQRCode } = require("../utils/qrCodeHelper");
 
 
 
+
+const getAllOrders = async (req, res, next) => {
+    try {
+        let { pageNo = 1, pageSize = 10, order_status } = req.query;
+
+        pageNo = parseInt(pageNo);
+        pageSize = parseInt(pageSize);
+
+        const offset = (pageNo - 1) * pageSize;
+
+        const whereCondition = {};
+        if (order_status) {
+            whereCondition.status = order_status;
+        }
+
+        const { count, rows } = await Order.findAndCountAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: Ticket,
+                    as: 'tickets',
+                    attributes: ['id', 'qr_code'],
+                    include: [
+                        {
+                            model: Showtime,
+                            as: 'showtime',
+                            attributes: ['start_time'],
+                            include: [
+                                {
+                                    model: Movie,
+                                    as: 'movie',
+                                    attributes: ['title', 'duration', 'poster_urls'],
+                                    include: [
+                                        {
+                                            model: Genre,
+                                            as: 'genres',
+                                            attributes: ['name'],
+                                            through: { attributes: [] }
+                                        }
+                                    ]
+                                },
+                                {
+                                    model: CinemaRoom,
+                                    as: 'room',
+                                    attributes: ['id', 'name'],
+                                    include: [
+                                        {
+                                            model: Cinema,
+                                            as: 'cinema',
+                                            attributes: ['id', 'name']
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            model: Seat,
+                            as: 'seat',
+                            attributes: ['row_label', 'number']
+                        }
+                    ]
+                }
+            ],
+            order: [['created_at', 'DESC']],
+            limit: pageSize,
+            offset,
+            distinct: true
+        });
+
+        const result = rows.map(order => {
+            const tickets = order.tickets || [];
+
+            const firstTicket = tickets[0];
+            const showtime = firstTicket?.showtime;
+            const movie = showtime?.movie;
+            const room = showtime?.room;
+            const cinema = room?.cinema;
+
+            return {
+                order_id: order.id,
+                booking_code: order.booking_code,
+                total_amount: order.total_amount,
+                order_status: order.status,
+                movie_name: movie?.title,
+                genres: movie?.genres?.map(g => g.name),
+                duration: movie?.duration,
+                poster: movie?.poster_urls?.[0],
+                showtime: showtime?.start_time,
+                room: room?.name,
+                cinema: cinema?.name,
+                seats: tickets.map(t => `${t.seat?.row_label}${t.seat?.number}`),
+                ticket_codes: tickets.map(t => t.qr_code)
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Get all orders successfully",
+            data: {
+                pageNo,
+                pageSize,
+                totalPages: Math.ceil(count / pageSize),
+                totalItems: count,
+                items: result
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 const getMyBookingHistory = async (req, res, next) => {
     try {
         const userId = req.user.id;
@@ -89,51 +202,51 @@ const getMyBookingHistory = async (req, res, next) => {
         });
 
         // 🔥 FORMAT DATA
-    
-    
-    const result = rows.map(order => {
-        const tickets = order.tickets || [];
 
-        if (tickets.length === 0) {
+
+        const result = rows.map(order => {
+            const tickets = order.tickets || [];
+
+            if (tickets.length === 0) {
+                return {
+                    order_id: order.id,
+                    booking_code: order.booking_code,
+                    total_amount: order.total_amount,
+                    payment_status: order.status,
+                    seats: [],
+                    ticket_codes: []
+                };
+            }
+
+            // 👉 Lấy ticket đầu làm đại diện
+            const firstTicket = tickets[0];
+            const showtime = firstTicket.showtime;
+            const movie = showtime?.movie;
+            const room = showtime?.room;
+            const cinema = room?.cinema;
+
             return {
                 order_id: order.id,
                 booking_code: order.booking_code,
                 total_amount: order.total_amount,
                 payment_status: order.status,
-                seats: [],
-                ticket_codes: []
+
+                movie_name: movie?.title,
+                genres: movie?.genres?.map(g => g.name),
+                duration: movie?.duration,
+                poster: movie?.poster_urls?.[0],
+
+                showtime: showtime?.start_time,
+                room: room?.name,
+                cinema: cinema?.name,
+
+                // 👉 gộp ghế
+                seats: tickets.map(t => `${t.seat?.row_label}${t.seat?.number}`),
+
+                // 👉 gộp mã vé
+                ticket_codes: tickets.map(t => t.qr_code)
             };
-        }
-
-        // 👉 Lấy ticket đầu làm đại diện
-        const firstTicket = tickets[0];
-        const showtime = firstTicket.showtime;
-        const movie = showtime?.movie;
-        const room = showtime?.room;
-        const cinema = room?.cinema;
-
-        return {
-            order_id: order.id,
-            booking_code: order.booking_code,
-            total_amount: order.total_amount,
-            payment_status: order.status,
-
-            movie_name: movie?.title,
-            genres: movie?.genres?.map(g => g.name),
-            duration: movie?.duration,
-            poster: movie?.poster_urls?.[0],
-
-            showtime: showtime?.start_time,
-            room: room?.name,
-            cinema: cinema?.name,
-
-        // 👉 gộp ghế
-            seats: tickets.map(t => `${t.seat?.row_label}${t.seat?.number}`),
-
-        // 👉 gộp mã vé
-            ticket_codes: tickets.map(t => t.qr_code)
-        };
-    });    
+        });
 
         return res.status(200).json({
             success: true,
@@ -302,10 +415,10 @@ const getOrderDetailById = async (req, res, next) => {
             // Discount
             voucher: voucher
                 ? {
-                      code: voucher.code,
-                      value: voucher.value,
-                      type: voucher.type
-                  }
+                    code: voucher.code,
+                    value: voucher.value,
+                    type: voucher.type
+                }
                 : null,
             discount: order.discount_applied,
 
@@ -363,6 +476,7 @@ const checkInAllTickets = async (req, res, next) => {
 
 
 module.exports = {
+    getAllOrders,
     getMyBookingHistory,
     getOrderDetailById,
     checkInAllTickets

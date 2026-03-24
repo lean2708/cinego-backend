@@ -8,6 +8,7 @@ const OrderFood = require("../models/OrderFood");
 const Seat = require("../models/Seat");
 const Showtime = require("../models/Showtime");
 const Ticket = require("../models/Ticket");
+const User = require("../models/User");
 const UserVoucherUsage = require("../models/UserVoucherUsage");
 const Voucher = require("../models/Voucher");
 const { generateQRCode } = require("../utils/qrCodeHelper");
@@ -33,6 +34,11 @@ const getAllOrders = async (req, res, next) => {
         const { count, rows } = await Order.findAndCountAll({
             where: whereCondition,
             include: [
+                 {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id','full_name','email','phone','image_url']
+                },
                 {
                     model: Ticket,
                     as: 'tickets',
@@ -89,6 +95,7 @@ const getAllOrders = async (req, res, next) => {
 
             const firstTicket = tickets[0];
             const showtime = firstTicket?.showtime;
+            const user = order.user;
             const movie = showtime?.movie;
             const room = showtime?.room;
             const cinema = room?.cinema;
@@ -98,6 +105,15 @@ const getAllOrders = async (req, res, next) => {
                 booking_code: order.booking_code,
                 total_amount: order.total_amount,
                 order_status: order.status,
+
+                customer: {
+                  id: user?.id,
+                  name: user?.full_name,
+                  email: user?.email,
+                  phone: user?.phone,
+                  avatar: user?.image_url
+                },
+
                 movie_name: movie?.title,
                 genres: movie?.genres?.map(g => g.name),
                 duration: movie?.duration,
@@ -277,16 +293,19 @@ const getMyBookingHistory = async (req, res, next) => {
 
 const getOrderDetailById = async (req, res, next) => {
     try {
-        const userId = req.user.id;
         const { id } = req.params;
 
         const order = await Order.findOne({
             where: {
                 id,
-                user_id: userId,
                 is_deleted: false
             },
             include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id','full_name','email','phone','image_url']
+                },
                 {
                     model: Ticket,
                     as: 'tickets',
@@ -370,6 +389,8 @@ const getOrderDetailById = async (req, res, next) => {
         const tickets = order.tickets || [];
         const firstTicket = tickets[0];
 
+        const user = order.user;
+
         const showtime = firstTicket?.showtime;
         const movie = showtime?.movie;
         const room = showtime?.room;
@@ -396,6 +417,14 @@ const getOrderDetailById = async (req, res, next) => {
             booking_code: order.booking_code,
             payment_status: order.status,
             qr_code_url: qrCodeImage,
+
+            customer: {
+                id: user?.id,
+                name: user?.full_name,
+                email: user?.email,
+                phone: user?.phone,
+                avatar: user?.image_url
+            },
 
             // Movie
             movie_name: movie?.title,
@@ -502,6 +531,11 @@ const getSystemCheckinHistory = async (req, res, next) => {
             where: { is_deleted: false },
             include: [
                 {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id','full_name','email','phone','image_url']
+                },
+                {
                     model: Ticket,
                     as: 'tickets',
                     where: ticketWhere,
@@ -557,6 +591,9 @@ const getSystemCheckinHistory = async (req, res, next) => {
         const result = rows.map(order => {
             const tickets = order.tickets || [];
             const firstTicket = tickets[0];
+
+            const user = order.user;
+
             const showtime = firstTicket?.showtime;
             const movie = showtime?.movie;
             const room = showtime?.room;
@@ -565,6 +602,15 @@ const getSystemCheckinHistory = async (req, res, next) => {
             return {
                 order_id: order.id,
                 booking_code: order.booking_code,
+                
+                customer: {
+                  id: user?.id,
+                  name: user?.full_name,
+                  email: user?.email,
+                  phone: user?.phone,
+                  avatar: user?.image_url
+                },
+
                 movie_name: movie?.title,
                 genres: movie?.genres?.map(g => g.name),
                 duration: movie?.duration,

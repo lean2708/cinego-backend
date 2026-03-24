@@ -1,4 +1,4 @@
-const { getMyBookingHistory, getOrderDetailById, checkInAllTickets, getAllOrders } = require("../controllers/orderController");
+const { getMyBookingHistory, getOrderDetailById, checkInAllTickets, getAllOrders, getSystemCheckinHistory } = require("../controllers/orderController");
 const { authToken, isAdmin } = require("../middlewares/authToken");
 const express = require("express");
 
@@ -53,7 +53,7 @@ router.get("/admin", authToken, isAdmin, getAllOrders);
  * @swagger
  * /orders/my-history:
  *   get:
- *     summary: Get my booking history (can filter by payment_status)
+ *     summary: Get my booking history (Ticket History) (can filter by payment_status)
  *     tags: [Orders]
  *     security:
  *       - BearerAuth: []
@@ -196,5 +196,41 @@ router.get("/:id", authToken, getOrderDetailById);
  *         description: Order not found
  */
 router.post("/check-in", checkInAllTickets);
+
+
+/**
+ * @swagger
+ * /orders/checkin/history/all:
+ *   get:
+ *     summary: Get system check-in history (admin only, can filter by ticket_status)
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pageNo
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *         description: Page number
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         example: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: ticket_status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, CHECKED_IN, EXPIRED]
+ *         description: Filter tickets by status
+ *     responses:
+ *       200:
+ *         description: Get system check-in history successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/checkin/history/all', authToken, isAdmin, getSystemCheckinHistory);
 
 module.exports = router;

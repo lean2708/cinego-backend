@@ -41,10 +41,10 @@ const Ticket = sequelize.define('Ticket', {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    is_used: {
-        type: DataTypes.BOOLEAN,
+    ticket_status: {
+        type: DataTypes.ENUM('PENDING', 'CHECKED_IN', 'EXPIRED'),
         allowNull: false,
-        defaultValue: false,
+        defaultValue: 'PENDING'
     },
     is_deleted: {
         type: DataTypes.BOOLEAN,

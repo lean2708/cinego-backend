@@ -12,6 +12,8 @@ const fileRouter = require("./fileRoute");
 const showtimeRouter = require("./showtimeRoute");
 const cinemaRoomRouter = require("./cinemaRoomRoute");
 const orderRouter = require("./orderRoute");
+const ticketRouter = require("./ticketRoute");
+
 
 const express = require("express");
 
@@ -45,6 +47,8 @@ router.use("/showtimes", showtimeRouter);
 
 
 router.use("/orders", orderRouter);
+
+router.use("/tickets", ticketRouter);
 
 
 module.exports = router;

@@ -12,7 +12,6 @@ const createDefaultAdmin = require('./utils/initDefaultData');
 const redisClient = require('./config/redis'); // Kết nối Redis đã có
 const ShowtimeSeat = require('./models/ShowtimeSeat'); // Model quản lý trạng thái ghế
 const Ticket = require('./models/Ticket'); // Model vé
-const Booking = require('./models/Booking'); // Model đơn đặt vé
 
 const app = express();
 const PORT = process.env.PORT || 8080;

@@ -1,3 +1,4 @@
+const AppError = require("../utils/appError");
 const Cinema = require("../models/Cinema");
 const CinemaRoom = require("../models/CinemaRoom");
 const Food = require("../models/Food");
@@ -12,7 +13,105 @@ const User = require("../models/User");
 const UserVoucherUsage = require("../models/UserVoucherUsage");
 const Voucher = require("../models/Voucher");
 const { generateQRCode } = require("../utils/qrCodeHelper");
+const checkoutOrder = async (req, res, next) => {
+    try {
+        const { ticketIds = [], foodItems = [], voucher_code } = req.body;
 
+        if ((!Array.isArray(ticketIds) || ticketIds.length === 0) && (!Array.isArray(foodItems) || foodItems.length === 0)) {
+            throw new AppError(400, "Please provide ticket IDs or food items");
+        }
+        let ticket_total = 0;
+        const ticketDetails = [];
+        if (ticketIds.length > 0) {
+            const tickets = await Ticket.findAll({ 
+                where: { id: ticketIds, is_deleted: false },
+                include: [{ model: Showtime, as: 'showtime', attributes: ['base_price'] }]
+            });
+            
+            if (tickets.length !== ticketIds.length) {
+                throw new AppError(400, "Some tickets not found or are deleted");
+            }
+            
+            tickets.forEach(ticket => {
+                const price = ticket.showtime?.base_price || 0;
+                ticket_total += price;
+                ticketDetails.push({ id: ticket.id, price });
+            });
+        }
+
+        let food_total = 0;
+        const foodDetails = [];
+        if (foodItems.length > 0) {
+            for (const item of foodItems) {
+                const { foodId, quantity } = item;
+                if (!foodId || !quantity || quantity <= 0) {
+                    throw new AppError(400, "Invalid food item: foodId and quantity required");
+                }
+                
+                const food = await Food.findOne({ where: { id: foodId, is_deleted: false } });
+                if (!food) {
+                    throw new AppError(400, `Food item ${foodId} not found or is deleted`);
+                }
+                if (!food.is_available) {
+                    throw new AppError(400, `Food item ${food.name} is not available`);
+                }
+                
+                const itemTotal = food.price * quantity;
+                food_total += itemTotal;
+                foodDetails.push({ id: foodId, name: food.name, price: food.price, quantity, total: itemTotal });
+            }
+        }
+
+        const amount = ticket_total + food_total;
+        let discount = 0;
+        let voucher = null;
+        let voucherError = null;
+        if (voucher_code) {
+            try {
+                voucher = await Voucher.findOne({ where: { code: voucher_code, is_deleted: false } });
+                if (!voucher) throw new AppError(404, "Voucher not found");
+                if (!voucher.is_active) throw new AppError(400, "Voucher is inactive");
+                const now = new Date();
+                if (now < new Date(voucher.start_date) || now > new Date(voucher.end_date)) {
+                    throw new AppError(400, "Voucher is expired or not yet valid");
+                }
+                if (voucher.usage_limit !== null) {
+                    const usedCount = await UserVoucherUsage.count({ where: { voucher_id: voucher.id } });
+                    if (usedCount >= voucher.usage_limit) {
+                        throw new AppError(400, "Voucher has reached its usage limit");
+                    }
+                }
+                if (voucher.type === "PERCENT") {
+                    discount = Math.round((voucher.value / 100) * amount);
+                } else {
+                    discount = Math.min(voucher.value, amount);
+                }
+            } catch (err) {
+                voucherError = err.message || "Voucher invalid";
+                voucher = null;
+                discount = 0;
+            }
+        }
+
+        const total_amount = Math.max(amount - discount, 0);
+
+        return res.status(200).json({
+            success: !voucherError,
+            message: voucherError ? voucherError : 'Tính tổng tiền thành công',
+            data: {
+                ticket_total,
+                ticket_details: ticketDetails,
+                food_total,
+                food_details: foodDetails,
+                discount,
+                voucher: voucher ? { code: voucher.code, value: voucher.value, type: voucher.type } : null,
+                total_amount
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
 
 
@@ -650,4 +749,5 @@ module.exports = {
     getOrderDetailById,
     checkInAllTickets,
     getSystemCheckinHistory
+    ,checkoutOrder
 }

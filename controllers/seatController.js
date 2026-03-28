@@ -3,6 +3,8 @@ const xlsx = require("xlsx");
 const fs = require("fs");
 const sequelize = require('../config/database');
 const Seat = require("../models/Seat");
+const Showtime = require("../models/Showtime");
+const ShowtimeSeat = require("../models/ShowtimeSeat");
 
 const importSeatsFromExcel = async (req, res, next) => {
     const t = await sequelize.transaction();
@@ -107,5 +109,32 @@ const getSeatById = async (req, res, next) => {
         return res.status(200).json({ success: true, data: s });
     } catch (e) { next(e); }
 };
+const getSeatMapByShowtime = async (req, res, next) => {
+    try {
+        const { showtime_id } = req.params;
+        if (!showtime_id) throw new AppError(400, "Missing showtime_id");
 
-module.exports = { importSeatsFromExcel, createSeat, updateSeatById, deleteSeatById, getAllSeats, getSeatById };
+        const showtime = await Showtime.findOne({ where: { id: showtime_id, is_deleted: false } });
+        if (!showtime) throw new AppError(404, "Showtime not found");
+
+        const seats = await Seat.findAll({ where: { room_id: showtime.room_id, is_deleted: false }, raw: true });
+        const showtimeSeats = await ShowtimeSeat.findAll({ where: { showtime_id }, raw: true });
+        const seatStatusMap = {};
+        showtimeSeats.forEach(s => { seatStatusMap[s.seat_id] = s.status; });
+        const map = {};
+        seats.forEach(seat => {
+            if (!map[seat.row_label]) map[seat.row_label] = [];
+            map[seat.row_label].push({
+                id: seat.id,
+                number: seat.number,
+                type: seat.type,
+                status: seatStatusMap[seat.id] || "AVAILABLE"
+            });
+        });
+        Object.values(map).forEach(row => row.sort((a, b) => a.number - b.number));
+
+        return res.status(200).json({ success: true, data: map });
+    } catch (e) { next(e); }
+};
+
+module.exports = { importSeatsFromExcel, createSeat, updateSeatById, deleteSeatById, getAllSeats, getSeatById, getSeatMapByShowtime };

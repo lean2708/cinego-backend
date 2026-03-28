@@ -4,6 +4,49 @@ const multer = require("multer");
 const seatController = require("../controllers/seatController");
 const { isAdmin, authToken } = require("../middlewares/authToken");
 const upload = multer({ dest: "uploads/" });
+
+/**
+ * @swagger
+ * /seats/showtime/{showtime_id}/map:
+ *   get:
+ *     tags:
+ *       - Seats
+ *     summary: Get seat map for a showtime
+ *     parameters:
+ *       - in: path
+ *         name: showtime_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Showtime ID
+ *     responses:
+ *       200:
+ *         description: Seat map for the showtime
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         number:
+ *                           type: integer
+ *                         type:
+ *                           type: string
+ *                         status:
+ *                           type: string
+ *                           enum: [AVAILABLE, HOLDING, BOOKED]
+ */
+router.get("/showtime/:showtime_id/map", seatController.getSeatMapByShowtime);
 /**
  * @swagger
  * /seats/import-excel:

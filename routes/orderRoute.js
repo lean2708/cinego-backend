@@ -1,9 +1,100 @@
-const { getMyBookingHistory, getOrderDetailById, checkInAllTickets, getAllOrders, getSystemCheckinHistory } = require("../controllers/orderController");
-const { authToken, isAdmin } = require("../middlewares/authToken");
 const express = require("express");
-
+const { authToken, isAdmin } = require("../middlewares/authToken");
+const { getMyBookingHistory, getOrderDetailById, checkInAllTickets, getAllOrders, getSystemCheckinHistory, checkoutOrder } = require("../controllers/orderController");
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /orders/checkout:
+ *   post:
+ *     summary: Tính tổng tiền vé + food - voucher (không lưu DB, lấy giá từ DB)
+ *     tags: [Orders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ticketIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of ticket IDs to calculate prices
+ *               foodItems:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     foodId:
+ *                       type: integer
+ *                       description: Food item ID
+ *                     quantity:
+ *                       type: integer
+ *                       description: Quantity of food items
+ *               voucher_code:
+ *                 type: string
+ *                 description: Optional voucher code
+ *     responses:
+ *       200:
+ *         description: Kết quả tính tổng tiền
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     ticket_total:
+ *                       type: number
+ *                     ticket_details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           price:
+ *                             type: number
+ *                     food_total:
+ *                       type: number
+ *                     food_details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           quantity:
+ *                             type: integer
+ *                           total:
+ *                             type: number
+ *                     discount:
+ *                       type: number
+ *                     voucher:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         code:
+ *                           type: string
+ *                         value:
+ *                           type: number
+ *                         type:
+ *                           type: string
+ *                     total_amount:
+ *                       type: number
+ */
+router.post("/checkout", checkoutOrder);
 
 /**
  * @swagger

@@ -165,19 +165,33 @@ router.get('/admin', authToken, isAdmin, getAllMoviesForAdmin);
  * @swagger
  * /movies:
  *   get:
- *     summary: Retrieve movies for User (only active)
+ *     summary: Search movie theo genre, status, title (không bắt buộc truyền param)
  *     tags: [Movies]
  *     parameters:
  *       - in: query
  *         name: pageNo
  *         schema:
  *           type: integer
- *         description: Page number (default 1)
  *       - in: query
  *         name: pageSize
  *         schema:
  *           type: integer
- *         description: Items per page (default 10)
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         description: Search by movie title
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [SHOWING, COMING_SOON, PASSED]
+ *         description: Filter by movie status
+ *       - in: query
+ *         name: genreId
+ *         schema:
+ *           type: integer
+ *         description: Filter by genre ID
  *     responses:
  *       200:
  *         description: Get movies successfully

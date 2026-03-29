@@ -3,6 +3,8 @@ const Genre = require('../models/Genre');
 const MovieGenre = require('../models/MovieGenre');
 const sequelize = require('../config/database');
 const AppError = require('../utils/appError');
+const { Op } = require('sequelize');
+
 
 const getAllMovies = async (req, res, next) => {
     try {
@@ -10,13 +12,47 @@ const getAllMovies = async (req, res, next) => {
         const pageSize = parseInt(req.query.pageSize) || 10;
         const offset = (pageNo - 1) * pageSize;
 
+        const { title, status, genreId } = req.query;
+
+         const movieWhere = {
+            is_deleted: false,
+        };
+
+        // search title
+        if (title) {
+            movieWhere.title = {
+                [Op.like]: `%${title}%`
+            };
+        }
+
+        // filter status
+        if (status) {
+            movieWhere.status = status;
+        }
+
+        // include genres
+        const genreInclude = {
+            model: Genre,
+            as: 'genres',
+            attributes: ['id', 'name'],
+            through: { attributes: [] },
+        };
+
+        // filter theo genre
+        if (genreId) {
+            const genre = await Genre.findByPk(genreId);
+            if (!genre) {
+                throw new AppError(400, "Genre not found");
+            }
+
+            genreInclude.where = { id: genreId };
+        }
+
+
+
         const { count, rows } = await Movie.findAndCountAll({
-            where: { is_deleted: false },
-            include: [{
-                model: Genre,
-                as: 'genres',
-                through: { attributes: [] }
-            }],
+            where: movieWhere,
+            include: [genreInclude],
             limit: pageSize,
             offset,
             order: [['created_at', 'DESC']]

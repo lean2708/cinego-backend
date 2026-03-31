@@ -35,6 +35,7 @@ app.use(errorHandler);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 const initializeAssociations = require('./models/associations');
+const { startOrderTimeoutJob } = require('./cron/orderTimeout');
 initializeAssociations();
 initializeSocket(io);
 server.listen(PORT, async () => {
@@ -46,6 +47,8 @@ server.listen(PORT, async () => {
     await sequelize.sync({ alter: true });
 
     await createDefaultAdmin();
+
+    startOrderTimeoutJob();
 
     console.log("SERVER IS READY TO HANDLE REQUESTS !");
 

@@ -13,83 +13,303 @@ const User = require("../models/User");
 const UserVoucherUsage = require("../models/UserVoucherUsage");
 const Voucher = require("../models/Voucher");
 const { generateQRCode } = require("../utils/qrCodeHelper");
-const checkoutOrder = async (req, res, next) => {
-    try {
-        const { ticketIds = [], foodItems = [], voucher_code } = req.body;
+const sequelize = require("../config/database");
+const { createPaymentUrl } = require("../utils/vnpay");
+const ShowtimeSeat = require("../models/ShowtimeSeat");
 
-        if ((!Array.isArray(ticketIds) || ticketIds.length === 0) && (!Array.isArray(foodItems) || foodItems.length === 0)) {
-            throw new AppError(400, "Please provide ticket IDs or food items");
+
+
+const createOrder = async (req, res, next) => {
+    const t = await sequelize.transaction();
+    try {
+        const userId = req.user.id;
+        const { showtimeId, seatIds = [], foodItems = [], voucher_code } = req.body;
+
+        if (!showtimeId || !Array.isArray(seatIds) || seatIds.length === 0) {
+            throw new AppError(400, "Please select a showtime and seats");
         }
+
+        const SEAT_PRICE_MULTIPLIER = {
+            STANDARD: 1,
+            VIP: 1.5,
+            COUPLE: 2
+        };
+
+        // 1. Check seats exist
+        const showtimeSeats = await ShowtimeSeat.findAll({
+            where: { showtime_id: showtimeId, seat_id: seatIds, status: "AVAILABLE" },
+            transaction: t
+        });
+
+        if (showtimeSeats.length !== seatIds.length) {
+            throw new AppError(400, "Some selected seats do not exist");
+        }
+
+        // 2. Get showtime
+        const showtime = await Showtime.findByPk(showtimeId, { transaction: t });
+        if (!showtime) throw new AppError(400, "Showtime not found");
+
+        // 3. Get seats
+        const seats = await Seat.findAll({
+            where: { id: seatIds, is_deleted: false },
+            transaction: t
+        });
+
+        if (seats.length !== seatIds.length) {
+            throw new AppError(400, "Some seats are invalid or deleted");
+        }
+
+        // 4. Calculate ticket price
         let ticket_total = 0;
         const ticketDetails = [];
-        if (ticketIds.length > 0) {
-            const tickets = await Ticket.findAll({ 
-                where: { id: ticketIds, is_deleted: false },
-                include: [{ model: Showtime, as: 'showtime', attributes: ['base_price'] }]
-            });
-            
-            if (tickets.length !== ticketIds.length) {
-                throw new AppError(400, "Some tickets not found or are deleted");
-            }
-            
-            tickets.forEach(ticket => {
-                const price = ticket.showtime?.base_price || 0;
-                ticket_total += price;
-                ticketDetails.push({ id: ticket.id, price });
-            });
-        }
 
+        seats.forEach(seat => {
+            const basePrice = showtime.base_price;
+            const multiplier = SEAT_PRICE_MULTIPLIER[seat.type] || 1;
+            const finalPrice = Math.round(basePrice * multiplier);
+
+            ticket_total += finalPrice;
+
+            ticketDetails.push({
+                seat_id: seat.id,
+                price: finalPrice
+            });
+        });
+
+        // 5. Calculate food price (NO stock deduction)
         let food_total = 0;
         const foodDetails = [];
-        if (foodItems.length > 0) {
-            for (const item of foodItems) {
-                const { foodId, quantity } = item;
-                if (!foodId || !quantity || quantity <= 0) {
-                    throw new AppError(400, "Invalid food item: foodId and quantity required");
-                }
-                
-                const food = await Food.findOne({ where: { id: foodId, is_deleted: false } });
-                if (!food) {
-                    throw new AppError(400, `Food item ${foodId} not found or is deleted`);
-                }
-                if (!food.is_available) {
-                    throw new AppError(400, `Food item ${food.name} is not available`);
-                }
-                
-                const itemTotal = food.price * quantity;
-                food_total += itemTotal;
-                foodDetails.push({ id: foodId, name: food.name, price: food.price, quantity, total: itemTotal });
+
+        for (const item of foodItems) {
+            const { foodId, quantity } = item;
+
+            if (!foodId || !quantity || quantity <= 0) {
+                throw new AppError(400, "Invalid food item");
+            }
+
+            const food = await Food.findOne({
+                where: { id: foodId, is_deleted: false },
+                transaction: t
+            });
+
+            if (!food || !food.is_available) {
+                throw new AppError(400, `Food item ${foodId} is not available`);
+            }
+
+            const total = food.price * quantity;
+            food_total += total;
+
+            foodDetails.push({
+                food_id: food.id,
+                quantity,
+                price: food.price
+            });
+        }
+
+        // 6. Voucher (calculation only)
+        let discount = 0;
+        let voucher = null;
+
+        if (voucher_code) {
+            voucher = await Voucher.findOne({
+                where: { code: voucher_code, is_deleted: false },
+                transaction: t
+            });
+
+            if (!voucher) throw new AppError(404, "Voucher not found");
+            if (!voucher.is_active) throw new AppError(400, "Voucher is inactive");
+
+            const now = new Date();
+            if (now < new Date(voucher.start_date) || now > new Date(voucher.end_date)) {
+                throw new AppError(400, "Voucher is expired or not valid yet");
+            }
+
+            if (voucher.type === "PERCENT") {
+                discount = Math.round((voucher.value / 100) * (ticket_total + food_total));
+            } else {
+                discount = Math.min(voucher.value, ticket_total + food_total);
             }
         }
 
+        const total_amount = Math.max(ticket_total + food_total - discount, 0);
+
+        // 7. Create order
+        const booking_code = `BK${Date.now()}`;
+
+        const order = await Order.create({
+            user_id: userId,
+            booking_code,
+            status: "PENDING",
+            payment_method: "VNPAY",
+            ticket_total,
+            food_total,
+            discount_applied: discount,
+            total_amount,
+        }, { transaction: t });
+
+        // 8. Create tickets
+        for (const item of ticketDetails) {
+            await Ticket.create({
+                order_id: order.id,
+                showtime_id: showtimeId,
+                seat_id: item.seat_id,
+                price: item.price,
+                ticket_status: "PENDING"
+            }, { transaction: t });
+        }
+
+        // 9. Save order food
+        for (const item of foodDetails) {
+            await OrderFood.create({
+                order_id: order.id,
+                food_id: item.food_id,
+                quantity: item.quantity,
+                price_at_purchase: item.price
+            }, { transaction: t });
+        }
+
+        // 10. Create VNPay URL
+        const paymentUrl = createPaymentUrl(req, order);
+
+        await t.commit();
+
+        return res.status(201).json({
+            success: true,
+            message: "Order created successfully. Redirecting to payment gateway",
+            data: {
+                order_id: order.id,
+                booking_code: order.booking_code,
+                payment_url: paymentUrl
+            }
+        });
+
+    } catch (error) {
+        await t.rollback();
+        next(error);
+    }
+};
+
+
+
+
+const checkoutOrder = async (req, res, next) => {
+    try {
+        const { showtimeId, seatIds = [], foodItems = [], voucher_code } = req.body;
+
+        if (!showtimeId || !Array.isArray(seatIds) || seatIds.length === 0) {
+            throw new AppError(400, "Vui lòng chọn suất chiếu và ghế");
+        }
+
+        // CONFIG giá ghế
+        const SEAT_PRICE_MULTIPLIER = {
+            STANDARD: 1,
+            VIP: 1.5,
+            COUPLE: 2
+        };
+
+        // 🔹 1. Lấy showtime
+        const showtime = await Showtime.findByPk(showtimeId);
+        if (!showtime) throw new AppError(400, "Showtime không tồn tại");
+
+        // 🔹 2. Lấy ghế
+        const seats = await Seat.findAll({
+            where: { id: seatIds, is_deleted: false }
+        });
+
+        if (seats.length !== seatIds.length) {
+            throw new AppError(400, "Một số ghế không tồn tại");
+        }
+
+        // 🔹 3. Tính tiền vé theo loại ghế
+        let ticket_total = 0;
+        const ticketDetails = [];
+
+        seats.forEach(seat => {
+            const basePrice = showtime.base_price;
+            const multiplier = SEAT_PRICE_MULTIPLIER[seat.type] || 1;
+            const finalPrice = Math.round(basePrice * multiplier);
+
+            ticket_total += finalPrice;
+
+            ticketDetails.push({
+                seat_id: seat.id,
+                seat: `${seat.row_label}${seat.number}`,
+                type: seat.type,
+                base_price: basePrice,
+                final_price: finalPrice
+            });
+        });
+
+        // 🔹 4. Food
+        let food_total = 0;
+        const foodDetails = [];
+
+        for (const item of foodItems) {
+            const { foodId, quantity } = item;
+
+            if (!foodId || !quantity || quantity <= 0) {
+                throw new AppError(400, "Invalid food item");
+            }
+
+            const food = await Food.findOne({
+                where: { id: foodId, is_deleted: false }
+            });
+
+            if (!food || !food.is_available) {
+                throw new AppError(400, `Food ${foodId} not available`);
+            }
+
+            const total = food.price * quantity;
+            food_total += total;
+
+            foodDetails.push({
+                id: food.id,
+                name: food.name,
+                price: food.price,
+                quantity,
+                total
+            });
+        }
+
+        // 🔹 5. Voucher
         const amount = ticket_total + food_total;
         let discount = 0;
         let voucher = null;
         let voucherError = null;
+
         if (voucher_code) {
             try {
-                voucher = await Voucher.findOne({ where: { code: voucher_code, is_deleted: false } });
+                voucher = await Voucher.findOne({
+                    where: { code: voucher_code, is_deleted: false }
+                });
+
                 if (!voucher) throw new AppError(404, "Voucher not found");
                 if (!voucher.is_active) throw new AppError(400, "Voucher is inactive");
+
                 const now = new Date();
                 if (now < new Date(voucher.start_date) || now > new Date(voucher.end_date)) {
-                    throw new AppError(400, "Voucher is expired or not yet valid");
+                    throw new AppError(400, "Voucher expired");
                 }
+
                 if (voucher.usage_limit !== null) {
-                    const usedCount = await UserVoucherUsage.count({ where: { voucher_id: voucher.id } });
+                    const usedCount = await UserVoucherUsage.count({
+                        where: { voucher_id: voucher.id }
+                    });
                     if (usedCount >= voucher.usage_limit) {
-                        throw new AppError(400, "Voucher has reached its usage limit");
+                        throw new AppError(400, "Voucher usage limit reached");
                     }
                 }
+
                 if (voucher.type === "PERCENT") {
                     discount = Math.round((voucher.value / 100) * amount);
                 } else {
                     discount = Math.min(voucher.value, amount);
                 }
+
             } catch (err) {
-                voucherError = err.message || "Voucher invalid";
-                voucher = null;
+                voucherError = err.message;
                 discount = 0;
+                voucher = null;
             }
         }
 
@@ -97,18 +317,151 @@ const checkoutOrder = async (req, res, next) => {
 
         return res.status(200).json({
             success: !voucherError,
-            message: voucherError ? voucherError : 'Tính tổng tiền thành công',
+            message: voucherError || "Tính tổng tiền thành công",
             data: {
                 ticket_total,
                 ticket_details: ticketDetails,
                 food_total,
                 food_details: foodDetails,
                 discount,
-                voucher: voucher ? { code: voucher.code, value: voucher.value, type: voucher.type } : null,
+                voucher: voucher
+                    ? { code: voucher.code, value: voucher.value, type: voucher.type }
+                    : null,
                 total_amount
             }
         });
+
     } catch (error) {
+        next(error);
+    }
+};
+
+
+const vnpayReturn = async (req, res, next) => {
+    const t = await sequelize.transaction();
+
+    try {
+        const { vnp_TxnRef, vnp_ResponseCode } = req.query;
+
+        if (!vnp_TxnRef) {
+            throw new AppError(400, "Missing transaction reference");
+        }
+
+        // 1. Tìm order
+        const order = await Order.findOne({
+            where: { id: vnp_TxnRef },
+            include: [
+                {
+                    model: Ticket,
+                    as: "tickets"
+                },
+                {
+                    model: OrderFood,
+                    as: "orderFoods"
+                }
+            ],
+            transaction: t
+        });
+
+        if (!order) {
+            throw new AppError(404, "Order not found");
+        }
+
+        if (order.status === 'SUCCESS') {
+            throw new AppError(400, 'Order has already been paid successfully');
+        }
+
+
+        // PAYMENT SUCCESS
+        if (vnp_ResponseCode === "00") {
+
+            // 2. Update order
+            order.status = "SUCCESS";
+            order.payment_method = "VNPAY";
+            order.payment_time = new Date();
+            await order.save({ transaction: t });
+
+            // 3. Update tickets -> CHECKED_IN
+            for (const ticket of order.tickets) {
+                ticket.ticket_status = "CHECKED_IN";
+                await ticket.save({ transaction: t });
+
+                // 4. Update ShowtimeSeat -> BOOKED
+                await ShowtimeSeat.update(
+                    { status: "BOOKED" },
+                    {
+                        where: {
+                            showtime_id: ticket.showtime_id,
+                            seat_id: ticket.seat_id
+                        },
+                        transaction: t
+                    }
+                );
+            }
+
+            // 5. Trừ kho food
+            for (const item of order.orderFoods) {
+                const food = await Food.findByPk(item.food_id, { transaction: t });
+
+                if (!food) {
+                    throw new AppError(404, `Food ${item.food_id} not found`);
+                }
+
+                if (food.stock < item.quantity) {
+                    throw new AppError(400, `Food ${food.name} is out of stock`);
+                }
+
+                food.stock -= item.quantity;
+                await food.save({ transaction: t });
+            }
+
+            await t.commit();
+
+            return res.status(200).json({
+                success: true,
+                message: "Payment successful",
+                data: {
+                    order_id: order.id,
+                    booking_code: order.booking_code,
+                    status: order.status,
+                    payment_time: order.payment_time
+                }
+            });
+
+        }
+
+        //  PAYMENT FAILED
+        order.status = "FAILED";
+        await order.save({ transaction: t });
+
+        //  TRẢ GHẾ LẠI
+        for (const ticket of order.tickets) {
+            await ShowtimeSeat.update(
+                { status: "AVAILABLE" },
+                {
+                    where: {
+                        showtime_id: ticket.showtime_id,
+                        seat_id: ticket.seat_id
+                    },
+                    transaction: t
+                }
+            );
+        }
+
+        await t.commit();
+
+        return res.status(200).json({
+            success: false,
+            message: "Payment failed",
+            data: {
+                order_id: order.id,
+                status: order.status,
+                vnp_ResponseCode
+            }
+        });
+
+    } catch (error) {
+        await t.rollback();
         next(error);
     }
 };
@@ -750,4 +1103,6 @@ module.exports = {
     checkInAllTickets,
     getSystemCheckinHistory
     ,checkoutOrder
+    ,createOrder,
+    vnpayReturn
 }

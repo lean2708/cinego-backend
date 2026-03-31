@@ -1,27 +1,46 @@
 const express = require("express");
 const { authToken, isAdmin } = require("../middlewares/authToken");
-const { getMyBookingHistory, getOrderDetailById, checkInAllTickets, getAllOrders, getSystemCheckinHistory, checkoutOrder } = require("../controllers/orderController");
+const { getMyBookingHistory, getOrderDetailById, checkInAllTickets, getAllOrders, getSystemCheckinHistory, checkoutOrder, createOrder, vnpayReturn } = require("../controllers/orderController");
 
 const router = express.Router();
 
+
+
 /**
  * @swagger
- * /orders/checkout:
+ * tags:
+ *   - name: Orders
+ *     description: Order / Booking APIs
+ */
+
+
+
+/**
+ * @swagger
+ * /orders:
  *   post:
- *     summary: Tính tổng tiền vé + food - voucher (không lưu DB, lấy giá từ DB)
+ *     summary: Create order and generate payment URL
  *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - showtimeId
+ *               - seatIds
  *             properties:
- *               ticketIds:
+ *               showtimeId:
+ *                 type: integer
+ *                 description: Showtime ID
+ *               seatIds:
  *                 type: array
  *                 items:
  *                   type: integer
- *                 description: Array of ticket IDs to calculate prices
+ *                 description: Selected seat IDs
  *               foodItems:
  *                 type: array
  *                 items:
@@ -29,16 +48,14 @@ const router = express.Router();
  *                   properties:
  *                     foodId:
  *                       type: integer
- *                       description: Food item ID
  *                     quantity:
  *                       type: integer
- *                       description: Quantity of food items
  *               voucher_code:
  *                 type: string
  *                 description: Optional voucher code
  *     responses:
- *       200:
- *         description: Kết quả tính tổng tiền
+ *       201:
+ *         description: Order created successfully
  *         content:
  *           application/json:
  *             schema:
@@ -51,58 +68,95 @@ const router = express.Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     ticket_total:
- *                       type: number
- *                     ticket_details:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: integer
- *                           price:
- *                             type: number
- *                     food_total:
- *                       type: number
- *                     food_details:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: integer
- *                           name:
- *                             type: string
- *                           price:
- *                             type: number
- *                           quantity:
- *                             type: integer
- *                           total:
- *                             type: number
- *                     discount:
- *                       type: number
- *                     voucher:
- *                       type: object
- *                       nullable: true
- *                       properties:
- *                         code:
- *                           type: string
- *                         value:
- *                           type: number
- *                         type:
- *                           type: string
- *                     total_amount:
- *                       type: number
+ *                     order_id:
+ *                       type: integer
+ *                     booking_code:
+ *                       type: string
+ *                     payment_url:
+ *                       type: string
  */
-router.post("/checkout", checkoutOrder);
+router.post("/", authToken, createOrder);
+
+
+
 
 /**
  * @swagger
- * tags:
- *   - name: Orders
- *     description: Order / Booking APIs
+ * /orders/checkout:
+ *   post:
+ *     summary: Preview order - calculate total price (seats + food - voucher)
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - showtimeId
+ *               - seatIds
+ *             properties:
+ *               showtimeId:
+ *                 type: integer
+ *                 example: 1
+ *                 description: Showtime ID
+ *               seatIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 2, 3]
+ *                 description: Selected seat IDs
+ *               foodItems:
+ *                 type: array
+ *                 description: Optional food items
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     foodId:
+ *                       type: integer
+ *                       example: 1
+ *                     quantity:
+ *                       type: integer
+ *                       example: 2
+ *               voucher_code:
+ *                 type: string
+ *                 example: "DISCOUNT10"
+ *                 description: Optional voucher code
+ *     responses:
+ *       200:
+ *         description: Order preview calculated successfully
  */
+router.post("/checkout", authToken, checkoutOrder);
 
+
+
+/**
+ * @swagger
+ * /orders/vnpay-return:
+ *   get:
+ *     summary: VNPay return URL (handle payment result)
+ *     tags: [Orders]
+ *     description: VNPay sẽ gọi API này sau khi thanh toán xong
+ *     parameters:
+ *       - in: query
+ *         name: vnp_TxnRef
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Order ID (transaction reference)
+ *       - in: query
+ *         name: vnp_ResponseCode
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: VNPay response code (00 = success)
+ *     responses:
+ *       200:
+ *         description: Payment result processed
+ */
+router.get("/vnpay-return", vnpayReturn);
 
 
 /**
@@ -202,64 +256,7 @@ router.get("/admin", authToken, isAdmin, getAllOrders);
 router.get('/my-history', authToken, getMyBookingHistory);
 
 
-/**
- * @swagger
- * /orders/{id}:
- *   get:
- *     summary: Get order detail by ID
- *     tags: [Orders]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         example: 12
- *     responses:
- *       200:
- *         description: Get order detail successfully
- *         content:
- *           application/json:
- *             example:
- *               success: true
- *               message: "Get order detail successfully"
- *               data:
- *                 order_id: 12
- *                 booking_code: "BK20260322001"
- *                 payment_status: "SUCCESS"
- *                 movie_name: "Avengers: Endgame"
- *                 genres: ["Action", "Sci-Fi"]
- *                 duration: 181
- *                 poster: "https://cdn.example.com/poster.jpg"
- *                 showtime: "2026-03-22T14:00:00.000Z"
- *                 room: "Room 3"
- *                 cinema: "CGV Vincom"
- *                 seats: ["A5", "A6", "A7"]
- *                 ticket_codes: ["QR123", "QR124", "QR125"]
- *                 ticket_prices: [80000, 80000, 80000]
- *                 ticket_quantity: 3
- *                 ticket_total: 240000
- *                 foods:
- *                   - name: "Popcorn"
- *                     image: "https://cdn.example.com/popcorn.jpg"
- *                     quantity: 2
- *                     price: 50000
- *                     total: 100000
- *                 food_total: 100000
- *                 voucher:
- *                   code: "SALE50"
- *                   value: 50
- *                   type: "PERCENT"
- *                 discount: 50000
- *                 total_amount: 290000
- *       404:
- *         description: Order not found
- *       401:
- *         description: Unauthorized
- */
-router.get("/:id", authToken, getOrderDetailById);
+
 
 
 /**
@@ -323,5 +320,65 @@ router.post("/check-in", checkInAllTickets);
  *         description: Unauthorized
  */
 router.get('/checkin/history/all', authToken, isAdmin, getSystemCheckinHistory);
+
+
+/**
+ * @swagger
+ * /orders/{id}:
+ *   get:
+ *     summary: Get order detail by ID
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         example: 12
+ *     responses:
+ *       200:
+ *         description: Get order detail successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: "Get order detail successfully"
+ *               data:
+ *                 order_id: 12
+ *                 booking_code: "BK20260322001"
+ *                 payment_status: "SUCCESS"
+ *                 movie_name: "Avengers: Endgame"
+ *                 genres: ["Action", "Sci-Fi"]
+ *                 duration: 181
+ *                 poster: "https://cdn.example.com/poster.jpg"
+ *                 showtime: "2026-03-22T14:00:00.000Z"
+ *                 room: "Room 3"
+ *                 cinema: "CGV Vincom"
+ *                 seats: ["A5", "A6", "A7"]
+ *                 ticket_codes: ["QR123", "QR124", "QR125"]
+ *                 ticket_prices: [80000, 80000, 80000]
+ *                 ticket_quantity: 3
+ *                 ticket_total: 240000
+ *                 foods:
+ *                   - name: "Popcorn"
+ *                     image: "https://cdn.example.com/popcorn.jpg"
+ *                     quantity: 2
+ *                     price: 50000
+ *                     total: 100000
+ *                 food_total: 100000
+ *                 voucher:
+ *                   code: "SALE50"
+ *                   value: 50
+ *                   type: "PERCENT"
+ *                 discount: 50000
+ *                 total_amount: 290000
+ *       404:
+ *         description: Order not found
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/:id", authToken, getOrderDetailById);
 
 module.exports = router;

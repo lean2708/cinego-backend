@@ -1,4 +1,5 @@
 const swaggerJsdoc = require('swagger-jsdoc');
+const path = require('path');
 require('dotenv').config();
 
 const options = {
@@ -32,7 +33,9 @@ const options = {
     ]
   },
   apis: [
-    './routes/*.js'       // Quét file routes để tìm API
+    path.join(__dirname, '../routes/**/*.js'),
+    path.join(__dirname, '../controllers/**/*.js'),
+    path.join(__dirname, '../models/**/*.js')
   ], 
 };
 

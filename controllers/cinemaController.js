@@ -4,6 +4,7 @@ const CinemaRoom = require('../models/CinemaRoom');
 const Province = require("../models/Province");
 const AppError = require("../utils/appError");
 
+
 const getCinemasForUser = async (req, res, next) => {
     try {
         const { province_id } = req.query;

@@ -4,6 +4,7 @@ const MovieGenre = require('../models/MovieGenre');
 const sequelize = require('../config/database');
 const AppError = require('../utils/appError');
 const { Op } = require('sequelize');
+const Actor = require('../models/Actor');
 
 
 const getAllMovies = async (req, res, next) => {
@@ -48,11 +49,17 @@ const getAllMovies = async (req, res, next) => {
             genreInclude.where = { id: genreId };
         }
 
-
+        const actorInclude = {
+            model: Actor,
+            as: 'actors',
+            attributes: ['id', 'name', 'image_url'],
+            through: { attributes: [] },
+        };
+        
 
         const { count, rows } = await Movie.findAndCountAll({
             where: movieWhere,
-            include: [genreInclude],
+            include: [genreInclude, actorInclude],
             limit: pageSize,
             offset,
             order: [['created_at', 'DESC']]
@@ -84,6 +91,12 @@ const getAllMoviesForAdmin = async (req, res, next) => {
             include: [{
                 model: Genre,
                 as: 'genres',
+                through: { attributes: [] }
+            },
+            {
+                model: Actor,
+                as: 'actors',
+                attributes: ['id', 'name', 'image_url'],
                 through: { attributes: [] }
             }],
             limit: pageSize,
@@ -118,7 +131,13 @@ const getMovieById = async (req, res, next) => {
                 model: Genre,
                 as: 'genres',
                 through: { attributes: [] }
-            }]
+            },
+            {
+                model: Actor,
+                as: 'actors',
+                attributes: ['id', 'name', 'image_url'],
+                through: { attributes: [] }
+            }],
         });
 
         if (!movie) throw new AppError(404, "Không tìm thấy phim");
@@ -136,7 +155,7 @@ const getMovieById = async (req, res, next) => {
 const createMovie = async (req, res, next) => {
     try {
         const result = await sequelize.transaction(async (t) => {
-            const { title, duration, release_date, genreIds, ...movieData } = req.body;
+            const { title, duration, release_date, genreIds, actorIds, ...movieData } = req.body;
 
             if (!title || !duration || !release_date) {
                 throw new AppError(400, "Vui lòng cung cấp tiêu đề, thời lượng và ngày khởi chiếu");
@@ -148,6 +167,10 @@ const createMovie = async (req, res, next) => {
 
             if (genreIds && !Array.isArray(genreIds)) {
                 throw new AppError(400, "Danh sách thể loại (genreIds) phải là một mảng");
+            }
+
+            if (actorIds && !Array.isArray(actorIds)) {
+                throw new AppError(400, "Danh sách diễn viên (actorIds) phải là một mảng");
             }
 
             const newMovie = await Movie.create(
@@ -167,6 +190,19 @@ const createMovie = async (req, res, next) => {
                 await newMovie.setGenres(genreIds, { transaction: t });
             }
 
+            if (actorIds && actorIds.length > 0) {
+                const actors = await Actor.findAll({
+                    where: { id: actorIds },
+                    transaction: t
+                });
+
+                if (actors.length !== actorIds.length) {
+                    throw new AppError(404, "Một hoặc nhiều diễn viên không tồn tại");
+                }
+
+                await newMovie.setActors(actorIds, { transaction: t });
+            }
+
             return newMovie;
         });
 
@@ -184,7 +220,7 @@ const updateMovie = async (req, res, next) => {
     try {
         const result = await sequelize.transaction(async (t) => {
             const { id } = req.params;
-            const { genreIds, duration, ...updateData } = req.body;
+            const { genreIds, duration, actorIds, ...updateData } = req.body;
 
             if (isNaN(id)) throw new AppError(400, "ID phim không hợp lệ");
 
@@ -215,6 +251,19 @@ const updateMovie = async (req, res, next) => {
                     throw new AppError(404, "Một hoặc nhiều thể loại không tồn tại");
                 }
                 await movie.setGenres(genreIds, { transaction: t });
+            }
+
+            if (actorIds && actorIds.length > 0) {
+                const actors = await Actor.findAll({
+                    where: { id: actorIds },
+                    transaction: t
+                });
+
+                if (actors.length !== actorIds.length) {
+                    throw new AppError(404, "Một hoặc nhiều diễn viên không tồn tại");
+                }
+
+                await newMovie.setActors(actorIds, { transaction: t });
             }
 
             return await Movie.findByPk(id, {

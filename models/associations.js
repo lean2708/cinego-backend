@@ -14,6 +14,8 @@ const Food = require('./Food');
 const OrderFood = require('./OrderFood');
 const Voucher = require('./Voucher');
 const UserVoucherUsage = require('./UserVoucherUsage');
+const Actor = require('./Actor');
+const MovieActor = require('./MovieActor');
 
 function initializeAssociations() {
     // ==================== Province - Cinema ====================
@@ -109,6 +111,21 @@ function initializeAssociations() {
         otherKey: 'movie_id',
         as: 'movies',
     });
+
+    Movie.belongsToMany(Actor, { 
+        through: MovieActor,
+        foreignKey: 'movie_id',
+        otherKey: 'actor_id',
+        as: 'actors',
+    });
+
+    Actor.belongsToMany(Movie, {
+        through: MovieActor,
+        foreignKey: 'actor_id',
+        otherKey: 'movie_id',
+        as: 'movies',
+    });
+
 }
 
 module.exports = initializeAssociations;

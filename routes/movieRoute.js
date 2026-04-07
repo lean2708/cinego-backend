@@ -62,6 +62,11 @@ const router = express.Router();
  *                 items:
  *                   type: integer
  *                 example: [1, 2, 3]
+ *               actorIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 3, 5]
  *     responses:
  *       201:
  *         description: Movie created successfully
@@ -103,6 +108,12 @@ router.post('/', authToken, isAdmin, createMovie);
  *                 type: array
  *                 items:
  *                   type: integer
+ *                 example: [1, 3, 5]
+ *               actorIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 3, 5]
  *     responses:
  *       200:
  *         description: Movie updated successfully

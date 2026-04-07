@@ -2,6 +2,9 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const path = require('path');
 require('dotenv').config();
 
+const rawApiUrl = process.env.API_URL || 'http://localhost:8080';
+const normalizedApiUrl = /^https?:\/\//i.test(rawApiUrl) ? rawApiUrl : `http://${rawApiUrl}`;
+
 const options = {
   definition: {
     openapi: '3.0.0', 
@@ -12,7 +15,7 @@ const options = {
     },
     servers: [
       {
-        url: process.env.API_URL,
+        url: normalizedApiUrl,
         description: 'Development Server'
       }
     ],

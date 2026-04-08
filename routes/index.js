@@ -14,6 +14,7 @@ const cinemaRoomRouter = require("./cinemaRoomRoute");
 const orderRouter = require("./orderRoute");
 const ticketRouter = require("./ticketRoute");
 const actorRouter = require("./actorRoute");
+const dashboardRouter = require("./dashboardRoute");
 
 
 
@@ -27,6 +28,7 @@ const router = express.Router();
 
 
 router.use("/auth", authRouter);
+router.use("/dashboard", dashboardRouter);
 router.use("/provinces", provinceRouter);
 router.use("/cinemas", cinemaRouter);
 router.use("/movies", movieRouter);

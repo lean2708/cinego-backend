@@ -3,7 +3,67 @@ const router = express.Router();
 const multer = require("multer");
 const seatController = require("../controllers/seatController");
 const { isAdmin, authToken } = require("../middlewares/authToken");
+
 const upload = multer({ dest: "uploads/" });
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Seats
+ *     description: Seat management APIs
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Seat:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         room_id:
+ *           type: integer
+ *         row_label:
+ *           type: string
+ *           example: "A"
+ *         number:
+ *           type: integer
+ *           example: 10
+ *         type:
+ *           type: string
+ *           enum: [standard, vip, couple]
+ *           example: standard
+ *         is_deleted:
+ *           type: boolean
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *
+ *     SeatInput:
+ *       type: object
+ *       required:
+ *         - room_id
+ *         - row_label
+ *         - number
+ *       properties:
+ *         room_id:
+ *           type: integer
+ *           example: 1
+ *         row_label:
+ *           type: string
+ *           example: "A"
+ *         number:
+ *           type: integer
+ *           example: 10
+ *         type:
+ *           type: string
+ *           enum: [standard, vip, couple]
+ *           default: standard
+ */
 
 /**
  * @swagger
@@ -18,10 +78,9 @@ const upload = multer({ dest: "uploads/" });
  *         required: true
  *         schema:
  *           type: integer
- *         description: Showtime ID
  *     responses:
  *       200:
- *         description: Seat map for the showtime
+ *         description: Seat map
  *         content:
  *           application/json:
  *             schema:
@@ -47,13 +106,14 @@ const upload = multer({ dest: "uploads/" });
  *                           enum: [AVAILABLE, HOLDING, BOOKED]
  */
 router.get("/showtime/:showtime_id/map", seatController.getSeatMapByShowtime);
+
 /**
  * @swagger
  * /seats/import-excel:
  *   post:
  *     tags:
  *       - Seats
- *     summary: Import seats from an Excel file
+ *     summary: Import seats from Excel
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -62,25 +122,22 @@ router.get("/showtime/:showtime_id/map", seatController.getSeatMapByShowtime);
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - file
  *             properties:
  *               file:
  *                 type: string
  *                 format: binary
  *     responses:
  *       201:
- *         description: Seats imported successfully
- *       400:
- *         description: Bad Request
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
+ *         description: Import success
  */
-router.post("/import-excel", 
-    authToken, 
-    isAdmin, 
-    upload.single("file"), 
-    seatController.importSeatsFromExcel
+router.post(
+  "/import-excel",
+  authToken,
+  isAdmin,
+  upload.single("file"),
+  seatController.importSeatsFromExcel
 );
 
 /**
@@ -89,22 +146,20 @@ router.post("/import-excel",
  *   get:
  *     tags:
  *       - Seats
- *     summary: Retrieve all seats
+ *     summary: Get all seats
  *     parameters:
  *       - in: query
  *         name: room_id
  *         schema:
  *           type: integer
- *         description: Filter by room id
  *       - in: query
  *         name: type
  *         schema:
  *           type: string
- *           enum: [VIP, COUPLE, STANDARD]
- *         description: Filter by seat type
+ *           enum: [standard, vip, couple]
  *     responses:
  *       200:
- *         description: A list of seats
+ *         description: List seats
  *         content:
  *           application/json:
  *             schema:
@@ -112,16 +167,15 @@ router.post("/import-excel",
  *               properties:
  *                 success:
  *                   type: boolean
- *                 results:
- *                   type: integer
  *                 data:
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Seat'
+ *
  *   post:
  *     tags:
  *       - Seats
- *     summary: Create a new seat
+ *     summary: Create new seat
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -133,25 +187,10 @@ router.post("/import-excel",
  *     responses:
  *       201:
  *         description: Created
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Seat'
- *       400:
- *         description: Bad Request
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
  */
 router.route("/")
-    .get(seatController.getAllSeats)
-    .post(authToken, isAdmin, seatController.createSeat);
+  .get(seatController.getAllSeats)
+  .post(authToken, isAdmin, seatController.createSeat);
 
 /**
  * @swagger
@@ -169,21 +208,11 @@ router.route("/")
  *     responses:
  *       200:
  *         description: Seat detail
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Seat'
- *       404:
- *         description: Not Found
+ *
  *   put:
  *     tags:
  *       - Seats
- *     summary: Update a seat
+ *     summary: Update seat
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -201,21 +230,11 @@ router.route("/")
  *     responses:
  *       200:
  *         description: Updated
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Seat'
- *       404:
- *         description: Not Found
+ *
  *   delete:
  *     tags:
  *       - Seats
- *     summary: Soft-delete a seat
+ *     summary: Soft delete seat
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -226,20 +245,11 @@ router.route("/")
  *           type: integer
  *     responses:
  *       200:
- *         description: Deleted (soft)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *       404:
- *         description: Not Found
+ *         description: Deleted
  */
 router.route("/:id")
-    .get(seatController.getSeatById)
-    .put(authToken, isAdmin, seatController.updateSeatById)
-    .delete(authToken, isAdmin, seatController.deleteSeatById);
+  .get(seatController.getSeatById)
+  .put(authToken, isAdmin, seatController.updateSeatById)
+  .delete(authToken, isAdmin, seatController.deleteSeatById);
 
 module.exports = router;

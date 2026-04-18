@@ -14,7 +14,6 @@ const startOrderTimeoutJob = () => {
         const t = await sequelize.transaction();
 
         try {
-            console.log("Checking timeout orders...");
 
             const expiredTime = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000);
 

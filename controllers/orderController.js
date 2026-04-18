@@ -947,13 +947,29 @@ const checkInAllTickets = async (req, res, next) => {
         }
 
         let count = 0;
+        const alreadyCheckedTickets = [];
 
         for (let ticket of order.tickets) {
+            if (ticket.ticket_status === "CHECKED_IN") {
+                alreadyCheckedTickets.push(ticket.id);
+                continue; 
+            }
+
             if (ticket.ticket_status === "PENDING") {
                 ticket.ticket_status = "CHECKED_IN";
                 await ticket.save();
                 count++;
             }
+        }
+
+        if (alreadyCheckedTickets.length > 0) {
+            return res.status(200).json({
+                success: true,
+                message: `Checked-in ${count} tickets. Some tickets were already checked-in`,
+                warning: {
+                    already_checked_ticket_ids: alreadyCheckedTickets
+                }
+            });
         }
 
         return res.json({

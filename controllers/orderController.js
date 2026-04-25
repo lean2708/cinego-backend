@@ -37,11 +37,11 @@ const createOrder = async (req, res, next) => {
 
         // 1. Check seats exist
         const showtimeSeats = await ShowtimeSeat.findAll({
-            where: { showtime_id: showtimeId, seat_id: seatIds, status: "AVAILABLE" },
+            where: { showtime_id: showtimeId, seat_id: seatIds, status: "BOOKED" },
             transaction: t
         });
 
-        if (showtimeSeats.length !== seatIds.length) {
+        if (showtimeSeats.length > 0) {
             throw new AppError(400, "Some selected seats do not exist");
         }
 

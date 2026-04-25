@@ -24,6 +24,8 @@ const addProvince = async (req, res, next) => {
     }
 }
 
+
+
 const updateProvince = async (req, res, next) => {
     try {
         const result = await sequelize.transaction(async (t) => {

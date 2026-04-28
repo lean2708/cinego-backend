@@ -5,7 +5,8 @@ const {
     getAllUsers,
     updateUser,
     deleteUser,
-    uploadAvatar
+    uploadAvatar,
+    healthCheck
 } = require("../controllers/userController");
 
 const { authToken, isAdmin } = require("../middlewares/authToken");
@@ -220,5 +221,8 @@ router.put("/:id", authToken, updateUser);
  */
 router.delete("/:id", authToken, deleteUser);
 
+
+
+router.get("/health", healthCheck);
 
 module.exports = router;

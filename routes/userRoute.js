@@ -223,6 +223,34 @@ router.delete("/:id", authToken, deleteUser);
 
 
 
+/**
+ * @swagger
+ * /users/health:
+ *   get:
+ *     summary: Health check API (Check service status)
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Service is running
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Service is running 🚀
+ *                 timestamp:
+ *                   type: string
+ *                   example: 2026-04-29T10:00:00.000Z
+ *                 uptime:
+ *                   type: number
+ *                   example: 123.45
+ */
 router.get("/health", healthCheck);
+
 
 module.exports = router;

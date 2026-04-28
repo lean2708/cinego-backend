@@ -247,6 +247,19 @@ const uploadAvatar = async (req, res, next) => {
 };
 
 
+const healthCheck = async (req, res, next) => {
+    try {
+        return res.status(200).json({
+            success: true,
+            message: "Service is running 🚀",
+            timestamp: new Date(),
+            uptime: process.uptime()
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 
 module.exports = {
@@ -255,5 +268,6 @@ module.exports = {
     getAllUsers,
     updateUser,
     deleteUser,
-    uploadAvatar
+    uploadAvatar,
+    healthCheck
 }

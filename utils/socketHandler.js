@@ -7,16 +7,23 @@ const Ticket = require('../models/Ticket');
  * @param {Server} io - Socket.io server instance
  */
 const initializeSocket = (io) => {
+
+
     io.on('connection', (socket) => {
+
         console.log('User connected:', socket.id);
+
         socket.on('joinShowtime', (showtimeId) => {
             socket.join(`showtime_${showtimeId}`);
         });
+
+
         socket.on('lockSeat', async ({ showtimeId, seatId, userId }) => {
             const lockKey = `lock:showtime:${showtimeId}:seat:${seatId}`;
-            const holdTime = 300; // 5 minutes hold time
+            const holdTime = 600; // 10 minutes hold time
             try {
                 const isLocked = await redisClient.set(lockKey, userId, 'EX', holdTime, 'NX');
+
                 if (isLocked) {
                     await ShowtimeSeat.upsert({
                         showtime_id: showtimeId,
@@ -24,30 +31,42 @@ const initializeSocket = (io) => {
                         status: 'HOLDING',
                         hold_expired_at: new Date(Date.now() + holdTime * 1000)
                     });
+
                     socket.to(`showtime_${showtimeId}`).emit('seatLocked', { seatId, userId });
-                } else {
+
+                } 
+                else {
                     socket.emit('error', 'Ghế đã có người giữ, vui lòng chọn ghế khác');
                 }
+
             } catch (error) {
                 console.error("Lock seat error:", error);
                 socket.emit('error', 'Lỗi hệ thống khi khóa ghế');
             }
         });
 
-        // Release seat
+        // Release seat (bỏ ghế)
         socket.on('releaseSeat', async ({ showtimeId, seatId }) => {
+
             const lockKey = `lock:showtime:${showtimeId}:seat:${seatId}`;
+
             try {
+
                 await redisClient.del(lockKey);
+
                 await ShowtimeSeat.update(
                     { status: 'AVAILABLE', hold_expired_at: null },
                     { where: { showtime_id: showtimeId, seat_id: seatId } }
                 );
+
                 io.to(`showtime_${showtimeId}`).emit('seatReleased', { seatId });
+
             } catch (error) {
                 console.error("Release seat error:", error);
             }
         });
+
+
         socket.on('verifyTicket', async ({ ticketId, showId }) => {
             try {
                 const ticket = await Ticket.findByPk(ticketId);
@@ -91,6 +110,7 @@ const initializeSocket = (io) => {
                 socket.emit('error', 'Lỗi hệ thống khi xác thực vé');
             }
         });
+
 
         // Check-in ticket
         socket.on('checkInTicket', async ({ ticketId, showId, staffId }) => {
@@ -142,6 +162,7 @@ const initializeSocket = (io) => {
             }
         });
 
+
         // Get check-in status
         socket.on('getCheckInStatus', async ({ ticketId }) => {
             try {
@@ -169,6 +190,7 @@ const initializeSocket = (io) => {
             console.log('User disconnected:', socket.id);
         });
     });
+
 };
 
 module.exports = initializeSocket;

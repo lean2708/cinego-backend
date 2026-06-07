@@ -22,7 +22,7 @@ const getAllMovies = async (req, res, next) => {
         // search title
         if (title) {
             movieWhere.title = {
-                [Op.like]: `%${title}%`
+                [Op.iLike]: `%${title}%`
             };
         }
 

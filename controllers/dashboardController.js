@@ -14,14 +14,15 @@ const getSummaryStats = async (req, res, next) => {
     try {
         // Lấy năm hiện tại hoặc từ query
         const year = Math.max(1900, Math.min(parseInt(req.query.year) || new Date().getFullYear(), 2100));
-        const startOfYear = new Date(`${year}-01-01`);
+        // Sử dụng UTC cho cả startOfYear và endOfYear để tránh timezone issues
+        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
         const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
         // 1. Tính tổng doanh thu vé
         const ticketRevenue = await Order.sum('ticket_total', {
             where: {
                 status: 'SUCCESS',
-                createdAt: {
+                created_at: {
                     [Op.between]: [startOfYear, endOfYear]
                 }
             }
@@ -31,7 +32,7 @@ const getSummaryStats = async (req, res, next) => {
         const foodRevenue = await Order.sum('food_total', {
             where: {
                 status: 'SUCCESS',
-                createdAt: {
+                created_at: {
                     [Op.between]: [startOfYear, endOfYear]
                 }
             }
@@ -41,9 +42,10 @@ const getSummaryStats = async (req, res, next) => {
         const totalTicketsSold = await Ticket.count({
             include: [{
                 model: Order,
+                as: 'order',
                 where: {
                     status: 'SUCCESS',
-                    createdAt: {
+                    created_at: {
                         [Op.between]: [startOfYear, endOfYear]
                     }
                 },
@@ -54,7 +56,7 @@ const getSummaryStats = async (req, res, next) => {
         // 4. Đếm người dùng mới trong năm
         const newUsers = await User.count({
             where: {
-                createdAt: {
+                created_at: {
                     [Op.between]: [startOfYear, endOfYear]
                 }
             }
@@ -67,7 +69,7 @@ const getSummaryStats = async (req, res, next) => {
         const prevTicketRevenue = await Order.sum('ticket_total', {
             where: {
                 status: 'SUCCESS',
-                createdAt: {
+                created_at: {
                     [Op.between]: [prevStartOfYear, prevEndOfYear]
                 }
             }
@@ -76,7 +78,7 @@ const getSummaryStats = async (req, res, next) => {
         const prevFoodRevenue = await Order.sum('food_total', {
             where: {
                 status: 'SUCCESS',
-                createdAt: {
+                created_at: {
                     [Op.between]: [prevStartOfYear, prevEndOfYear]
                 }
             }
@@ -85,9 +87,10 @@ const getSummaryStats = async (req, res, next) => {
         const prevTicketsSold = await Ticket.count({
             include: [{
                 model: Order,
+                as: 'order',
                 where: {
                     status: 'SUCCESS',
-                    createdAt: {
+                    created_at: {
                         [Op.between]: [prevStartOfYear, prevEndOfYear]
                     }
                 },
@@ -97,7 +100,7 @@ const getSummaryStats = async (req, res, next) => {
 
         const prevNewUsers = await User.count({
             where: {
-                createdAt: {
+                created_at: {
                     [Op.between]: [prevStartOfYear, prevEndOfYear]
                 }
             }
@@ -150,13 +153,13 @@ const getMonthlyRevenueChart = async (req, res, next) => {
 
         const monthlyData = await sequelize.query(`
             SELECT 
-                MONTH(o."created_at") as month,
+                EXTRACT(MONTH FROM o."created_at") as month,
                 COALESCE(SUM(o."ticket_total" + o."food_total"), 0) as revenue
             FROM "Orders" o
             WHERE o."status" = 'SUCCESS'
-                AND YEAR(o."created_at") = :year
-            GROUP BY MONTH(o."created_at")
-            ORDER BY MONTH(o."created_at")
+                AND EXTRACT(YEAR FROM o."created_at") = :year
+            GROUP BY EXTRACT(MONTH FROM o."created_at")
+            ORDER BY EXTRACT(MONTH FROM o."created_at")
         `, {
             replacements: { year },
             type: sequelize.QueryTypes.SELECT
@@ -187,18 +190,26 @@ const getMonthlyRevenueChart = async (req, res, next) => {
 const getLatestBookings = async (req, res, next) => {
     try {
         const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
+        const year = Math.max(1900, Math.min(parseInt(req.query.year) || new Date().getFullYear(), 2100));
+        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
+        const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
         const latestBookings = await Ticket.findAll({
-            attributes: ['id', 'price', 'ticket_status', 'createdAt'],
+            attributes: ['id', 'price', 'ticket_status'],
             include: [
                 {
                     model: Order,
+                    as: 'order',
                     attributes: ['id', 'booking_code', 'status'],
-                    where: { status: 'SUCCESS' },
+                    where: { 
+                        status: 'SUCCESS',
+                        created_at: { [Op.between]: [startOfYear, endOfYear] }
+                    },
                     required: true,
                     include: [
                         {
                             model: User,
+                            as: 'user',
                             attributes: ['id', 'full_name', 'phone'],
                             required: true
                         }
@@ -206,31 +217,33 @@ const getLatestBookings = async (req, res, next) => {
                 },
                 {
                     model: Showtime,
+                    as: 'showtime',
                     attributes: ['id', 'base_price'],
                     required: true,
                     include: [
                         {
                             model: Movie,
+                            as: 'movie',
                             attributes: ['id', 'title'],
                             required: true
                         }
                     ]
                 }
             ],
-            order: [['createdAt', 'DESC']],
+            order: [['created_at', 'DESC']],
             limit,
             subQuery: false
         });
 
         const formattedBookings = latestBookings.map(ticket => ({
             ticketId: `#TK-${ticket.id}`,
-            bookingCode: ticket.Order.booking_code,
-            customerName: ticket.Order.User.full_name,
-            movieTitle: ticket.Showtime.Movie.title,
-            time: new Date(ticket.createdAt).toLocaleTimeString('vi-VN'),
-            date: new Date(ticket.createdAt).toLocaleDateString('vi-VN'),
-            status: ticket.Order.status === 'SUCCESS' ? 'Thành công' : 'Chưa thanh toán',
-            statusType: ticket.Order.status === 'SUCCESS' ? 'success' : 'pending'
+            bookingCode: ticket.order.booking_code,
+            customerName: ticket.order.user.full_name,
+            movieTitle: ticket.showtime.movie.title,
+            time: new Date(ticket.created_at).toLocaleTimeString('vi-VN'),
+            date: new Date(ticket.created_at).toLocaleDateString('vi-VN'),
+            status: ticket.order.status === 'SUCCESS' ? 'Thành công' : 'Chưa thanh toán',
+            statusType: ticket.order.status === 'SUCCESS' ? 'success' : 'pending'
         }));
 
         res.status(200).json({
@@ -252,7 +265,7 @@ const getTopGrossingMovies = async (req, res, next) => {
             SELECT 
                 m."id",
                 m."title",
-                m."poster_urls",
+                m."poster_urls"::text as poster_urls,
                 COALESCE(SUM(o."ticket_total"), 0) as revenue,
                 COUNT(t."id") as tickets_sold
             FROM "Tickets" t
@@ -260,8 +273,8 @@ const getTopGrossingMovies = async (req, res, next) => {
             JOIN "Showtimes" s ON t."showtime_id" = s."id"
             JOIN "Movies" m ON s."movie_id" = m."id"
             WHERE o."status" = 'SUCCESS'
-                AND YEAR(o."created_at") = :year
-            GROUP BY m."id", m."title", m."poster_urls"
+                AND EXTRACT(YEAR FROM o."created_at") = :year
+            GROUP BY m."id", m."title", m."poster_urls"::text
             ORDER BY revenue DESC
             LIMIT :limit
         `, {
@@ -273,7 +286,7 @@ const getTopGrossingMovies = async (req, res, next) => {
             rank: index + 1,
             id: movie.id,
             title: movie.title,
-            poster: movie.poster_urls ? (Array.isArray(movie.poster_urls) ? movie.poster_urls[0] : movie.poster_urls) : null,
+            poster: getSafeImageUrl(movie.poster_urls),
             revenue: Math.round(movie.revenue),
             ticketsSold: movie.tickets_sold
         }));
@@ -297,7 +310,7 @@ const getTopCinemasByBookings = async (req, res, next) => {
             SELECT 
                 c."id",
                 c."name",
-                c."image_urls",
+                c."image_urls"::text as image_urls,
                 COUNT(DISTINCT t."id") as total_bookings,
                 COALESCE(SUM(o."ticket_total" + o."food_total"), 0) as total_revenue
             FROM "Tickets" t
@@ -306,8 +319,8 @@ const getTopCinemasByBookings = async (req, res, next) => {
             JOIN "CinemaRooms" cr ON s."room_id" = cr."id"
             JOIN "Cinemas" c ON cr."cinema_id" = c."id"
             WHERE o."status" = 'SUCCESS'
-                AND YEAR(o."created_at") = :year
-            GROUP BY c."id", c."name", c."image_urls"
+                AND EXTRACT(YEAR FROM o."created_at") = :year
+            GROUP BY c."id", c."name", c."image_urls"::text
             ORDER BY total_bookings DESC
             LIMIT :limit
         `, {
@@ -319,7 +332,7 @@ const getTopCinemasByBookings = async (req, res, next) => {
             rank: index + 1,
             id: cinema.id,
             name: cinema.name,
-            logo: cinema.image_urls ? (Array.isArray(cinema.image_urls) ? cinema.image_urls[0] : cinema.image_urls) : null,
+            logo: getSafeImageUrl(cinema.image_urls),
             totalBookings: cinema.total_bookings,
             totalRevenue: Math.round(cinema.total_revenue)
         }));
@@ -337,7 +350,7 @@ const getTopCinemasByBookings = async (req, res, next) => {
 const getDashboardData = async (req, res, next) => {
     try {
         const year = Math.max(1900, Math.min(parseInt(req.query.year) || new Date().getFullYear(), 2100));
-        const startOfYear = new Date(`${year}-01-01`);
+        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
         const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
         // Get all data in parallel
@@ -348,23 +361,24 @@ const getDashboardData = async (req, res, next) => {
                 const ticketRevenue = await Order.sum('ticket_total', {
                     where: {
                         status: 'SUCCESS',
-                        createdAt: { [Op.between]: [startOfYear, endOfYear] }
+                        created_at: { [Op.between]: [startOfYear, endOfYear] }
                     }
                 }) || 0;
 
                 const foodRevenue = await Order.sum('food_total', {
                     where: {
                         status: 'SUCCESS',
-                        createdAt: { [Op.between]: [startOfYear, endOfYear] }
+                        created_at: { [Op.between]: [startOfYear, endOfYear] }
                     }
                 }) || 0;
 
                 const totalTicketsSold = await Ticket.count({
                     include: [{
                         model: Order,
+                        as: 'order',
                         where: {
                             status: 'SUCCESS',
-                            createdAt: { [Op.between]: [startOfYear, endOfYear] }
+                            created_at: { [Op.between]: [startOfYear, endOfYear] }
                         },
                         required: true
                     }]
@@ -372,7 +386,7 @@ const getDashboardData = async (req, res, next) => {
 
                 const newUsers = await User.count({
                     where: {
-                        createdAt: { [Op.between]: [startOfYear, endOfYear] }
+                        created_at: { [Op.between]: [startOfYear, endOfYear] }
                     }
                 });
 
@@ -389,14 +403,14 @@ const getDashboardData = async (req, res, next) => {
             (async () => {
                 const monthlyData = await sequelize.query(`
                     SELECT 
-                        MONTH(o."created_at") as month,
+                        EXTRACT(MONTH FROM o."created_at") as month,
                         COALESCE(SUM(o."ticket_total" + o."food_total"), 0) as revenue
                     FROM "Orders" o
                     WHERE o."status" = 'SUCCESS'
                         AND o."created_at" >= :startDate
                         AND o."created_at" <= :endDate
-                    GROUP BY MONTH(o."created_at")
-                    ORDER BY MONTH(o."created_at")
+                    GROUP BY EXTRACT(MONTH FROM o."created_at")
+                    ORDER BY EXTRACT(MONTH FROM o."created_at")
                 `, {
                     replacements: { startDate: startOfYear, endDate: endOfYear },
                     type: sequelize.QueryTypes.SELECT
@@ -413,33 +427,38 @@ const getDashboardData = async (req, res, next) => {
             // Latest bookings
             (async () => {
                 const bookings = await Ticket.findAll({
-                    attributes: ['id', 'price', 'ticket_status', 'createdAt'],
+                    attributes: ['id', 'price', 'ticket_status'],
                     include: [
                         {
                             model: Order,
+                            as: 'order',
                             attributes: ['id', 'booking_code', 'status'],
-                            where: { status: 'SUCCESS' },
+                            where: { 
+                                status: 'SUCCESS',
+                                created_at: { [Op.between]: [startOfYear, endOfYear] }
+                            },
                             required: true,
-                            include: [{ model: User, attributes: ['full_name'], required: true }]
+                            include: [{ model: User, as: 'user', attributes: ['full_name'], required: true }]
                         },
                         {
                             model: Showtime,
+                            as: 'showtime',
                             attributes: ['base_price'],
                             required: true,
-                            include: [{ model: Movie, attributes: ['title'], required: true }]
+                            include: [{ model: Movie, as: 'movie', attributes: ['title'], required: true }]
                         }
                     ],
-                    order: [['createdAt', 'DESC']],
+                    order: [['created_at', 'DESC']],
                     limit: 10,
                     subQuery: false
                 });
 
                 return bookings.map(ticket => ({
                     ticketId: `#TK-${ticket.id}`,
-                    bookingCode: ticket.Order.booking_code,
-                    customerName: ticket.Order.User.full_name,
-                    movieTitle: ticket.Showtime.Movie.title,
-                    time: new Date(ticket.createdAt).toLocaleTimeString('vi-VN', { 
+                    bookingCode: ticket.order.booking_code,
+                    customerName: ticket.order.user.full_name,
+                    movieTitle: ticket.showtime.movie.title,
+                    time: new Date(ticket.created_at).toLocaleTimeString('vi-VN', { 
                         hour: '2-digit', 
                         minute: '2-digit'
                     }),
@@ -453,7 +472,7 @@ const getDashboardData = async (req, res, next) => {
                     SELECT 
                         m."id",
                         m."title",
-                        m."poster_urls",
+                        m."poster_urls"::text as poster_urls,
                         COALESCE(SUM(o."ticket_total"), 0) as revenue
                     FROM "Tickets" t
                     JOIN "Orders" o ON t."order_id" = o."id"
@@ -462,7 +481,7 @@ const getDashboardData = async (req, res, next) => {
                     WHERE o."status" = 'SUCCESS'
                         AND o."created_at" >= :startDate
                         AND o."created_at" <= :endDate
-                    GROUP BY m."id", m."title", m."poster_urls"
+                    GROUP BY m."id", m."title", m."poster_urls"::text
                     ORDER BY revenue DESC
                     LIMIT 5
                 `, {
@@ -473,7 +492,7 @@ const getDashboardData = async (req, res, next) => {
                 return movies.map((movie, index) => ({
                     rank: index + 1,
                     title: movie.title,
-                    poster: movie.poster_urls ? (Array.isArray(movie.poster_urls) ? movie.poster_urls[0] : movie.poster_urls) : null,
+                    poster: getSafeImageUrl(movie.poster_urls),
                     revenue: Math.round(movie.revenue)
                 }));
             })(),
@@ -484,7 +503,7 @@ const getDashboardData = async (req, res, next) => {
                     SELECT 
                         c."id",
                         c."name",
-                        c."image_urls",
+                        c."image_urls"::text as image_urls,
                         COUNT(DISTINCT t."id") as total_bookings
                     FROM "Tickets" t
                     JOIN "Orders" o ON t."order_id" = o."id"
@@ -494,7 +513,7 @@ const getDashboardData = async (req, res, next) => {
                     WHERE o."status" = 'SUCCESS'
                         AND o."created_at" >= :startDate
                         AND o."created_at" <= :endDate
-                    GROUP BY c."id", c."name", c."image_urls"
+                    GROUP BY c."id", c."name", c."image_urls"::text
                     ORDER BY total_bookings DESC
                     LIMIT 5
                 `, {
@@ -505,7 +524,7 @@ const getDashboardData = async (req, res, next) => {
                 return cinemas.map((cinema, index) => ({
                     rank: index + 1,
                     name: cinema.name,
-                    logo: cinema.image_urls ? (Array.isArray(cinema.image_urls) ? cinema.image_urls[0] : cinema.image_urls) : null,
+                    logo: getSafeImageUrl(cinema.image_urls),
                     bookings: cinema.total_bookings
                 }));
             })()
@@ -530,6 +549,37 @@ const getDashboardData = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Safely extract first image URL from poster_urls or image_urls
+ * Handles: string, JSON array, or null values
+ */
+function getSafeImageUrl(urlsData) {
+    if (!urlsData) return null;
+    
+    try {
+        // Nếu là string
+        if (typeof urlsData === 'string') {
+            // Thử parse như JSON array
+            try {
+                const parsed = JSON.parse(urlsData);
+                return Array.isArray(parsed) ? parsed[0] : parsed;
+            } catch {
+                // Nếu không phải JSON, coi như URL thường
+                return urlsData;
+            }
+        }
+        // Nếu là array
+        if (Array.isArray(urlsData)) {
+            return urlsData[0] || null;
+        }
+        // Nếu là object khác, convert to string
+        return String(urlsData) || null;
+    } catch (error) {
+        console.error('Error extracting image URL:', error);
+        return null;
+    }
+}
 
 module.exports = {
     getSummaryStats,

@@ -6,7 +6,7 @@ Built with:
 - Node.js
 - Express.js
 - Sequelize ORM
-- PostgreSQL
+- PostgreSQL16
 - JWT Authentication
 - Swagger API Documentation
 

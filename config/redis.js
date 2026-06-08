@@ -16,6 +16,7 @@ redisClient.on("ready", async () => {
         const res = await redisClient.config("GET", "notify-keyspace-events");
         const current = Array.isArray(res) ? res[1] : res;
 
+        // Bật tính năng bắn event khi key hết hạn (Expired events)
         if (!current || !current.includes("E") || !current.includes("x")) {
             await redisClient.config("SET", "notify-keyspace-events", "Ex");
             console.log("Redis notify-keyspace-events set to Ex");

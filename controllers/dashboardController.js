@@ -1,5 +1,7 @@
 const sequelize = require('../config/database');
-const { Op } = require('sequelize');
+const {
+    Op
+} = require('sequelize');
 const Order = require('../models/Order');
 const Ticket = require('../models/Ticket');
 const OrderFood = require('../models/OrderFood');
@@ -107,21 +109,21 @@ const getSummaryStats = async (req, res, next) => {
         });
 
         // Tính % thay đổi
-        const ticketRevenueChange = prevTicketRevenue > 0 
-            ? ((ticketRevenue - prevTicketRevenue) / prevTicketRevenue * 100).toFixed(2)
-            : (ticketRevenue > 0 ? "100.00" : "0.00");
+        const ticketRevenueChange = prevTicketRevenue > 0 ?
+            ((ticketRevenue - prevTicketRevenue) / prevTicketRevenue * 100).toFixed(2) :
+            (ticketRevenue > 0 ? "100.00" : "0.00");
 
-        const foodRevenueChange = prevFoodRevenue > 0 
-            ? ((foodRevenue - prevFoodRevenue) / prevFoodRevenue * 100).toFixed(2)
-            : (foodRevenue > 0 ? "100.00" : "0.00");
+        const foodRevenueChange = prevFoodRevenue > 0 ?
+            ((foodRevenue - prevFoodRevenue) / prevFoodRevenue * 100).toFixed(2) :
+            (foodRevenue > 0 ? "100.00" : "0.00");
 
-        const ticketsSoldChange = prevTicketsSold > 0 
-            ? ((totalTicketsSold - prevTicketsSold) / prevTicketsSold * 100).toFixed(2)
-            : (totalTicketsSold > 0 ? "100.00" : "0.00");
+        const ticketsSoldChange = prevTicketsSold > 0 ?
+            ((totalTicketsSold - prevTicketsSold) / prevTicketsSold * 100).toFixed(2) :
+            (totalTicketsSold > 0 ? "100.00" : "0.00");
 
-        const newUsersChange = prevNewUsers > 0 
-            ? ((newUsers - prevNewUsers) / prevNewUsers * 100).toFixed(2)
-            : (newUsers > 0 ? "100.00" : "0.00");
+        const newUsersChange = prevNewUsers > 0 ?
+            ((newUsers - prevNewUsers) / prevNewUsers * 100).toFixed(2) :
+            (newUsers > 0 ? "100.00" : "0.00");
 
         const totalRevenue = ticketRevenue + foodRevenue;
 
@@ -161,7 +163,9 @@ const getMonthlyRevenueChart = async (req, res, next) => {
             GROUP BY EXTRACT(MONTH FROM o."created_at")
             ORDER BY EXTRACT(MONTH FROM o."created_at")
         `, {
-            replacements: { year },
+            replacements: {
+                year
+            },
             type: sequelize.QueryTypes.SELECT
         });
 
@@ -195,42 +199,41 @@ const getLatestBookings = async (req, res, next) => {
         const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
         const latestBookings = await Ticket.findAll({
-            attributes: ['id', 'price', 'ticket_status', 'createdAt'], 
-            include: [
-                {
+            attributes: ['id', 'price', 'ticket_status', 'createdAt'],
+            include: [{
                     model: Order,
                     as: 'order',
                     attributes: ['id', 'booking_code', 'status'],
-                    where: { 
+                    where: {
                         status: 'SUCCESS',
-                        createdAt: { [Op.between]: [startOfYear, endOfYear] } 
+                        createdAt: {
+                            [Op.between]: [startOfYear, endOfYear]
+                        }
                     },
                     required: true,
-                    include: [
-                        {
-                            model: User,
-                            as: 'user',
-                            attributes: ['id', 'full_name', 'phone'],
-                            required: true
-                        }
-                    ]
+                    include: [{
+                        model: User,
+                        as: 'user',
+                        attributes: ['id', 'full_name', 'phone'],
+                        required: true
+                    }]
                 },
                 {
                     model: Showtime,
                     as: 'showtime',
                     attributes: ['id', 'base_price'],
                     required: true,
-                    include: [
-                        {
-                            model: Movie,
-                            as: 'movie',
-                            attributes: ['id', 'title'],
-                            required: true
-                        }
-                    ]
+                    include: [{
+                        model: Movie,
+                        as: 'movie',
+                        attributes: ['id', 'title'],
+                        required: true
+                    }]
                 }
             ],
-            order: [['createdAt', 'DESC']], 
+            order: [
+                ['createdAt', 'DESC']
+            ],
             limit,
             subQuery: false
         });
@@ -278,7 +281,10 @@ const getTopGrossingMovies = async (req, res, next) => {
             ORDER BY revenue DESC
             LIMIT :limit
         `, {
-            replacements: { year, limit },
+            replacements: {
+                year,
+                limit
+            },
             type: sequelize.QueryTypes.SELECT
         });
 
@@ -324,7 +330,10 @@ const getTopCinemasByBookings = async (req, res, next) => {
             ORDER BY total_bookings DESC
             LIMIT :limit
         `, {
-            replacements: { year, limit },
+            replacements: {
+                year,
+                limit
+            },
             type: sequelize.QueryTypes.SELECT
         });
 
@@ -361,14 +370,18 @@ const getDashboardData = async (req, res, next) => {
                 const ticketRevenue = await Order.sum('ticket_total', {
                     where: {
                         status: 'SUCCESS',
-                        created_at: { [Op.between]: [startOfYear, endOfYear] }
+                        created_at: {
+                            [Op.between]: [startOfYear, endOfYear]
+                        }
                     }
                 }) || 0;
 
                 const foodRevenue = await Order.sum('food_total', {
                     where: {
                         status: 'SUCCESS',
-                        created_at: { [Op.between]: [startOfYear, endOfYear] }
+                        created_at: {
+                            [Op.between]: [startOfYear, endOfYear]
+                        }
                     }
                 }) || 0;
 
@@ -378,7 +391,9 @@ const getDashboardData = async (req, res, next) => {
                         as: 'order',
                         where: {
                             status: 'SUCCESS',
-                            created_at: { [Op.between]: [startOfYear, endOfYear] }
+                            created_at: {
+                                [Op.between]: [startOfYear, endOfYear]
+                            }
                         },
                         required: true
                     }]
@@ -386,7 +401,9 @@ const getDashboardData = async (req, res, next) => {
 
                 const newUsers = await User.count({
                     where: {
-                        created_at: { [Op.between]: [startOfYear, endOfYear] }
+                        created_at: {
+                            [Op.between]: [startOfYear, endOfYear]
+                        }
                     }
                 });
 
@@ -412,7 +429,10 @@ const getDashboardData = async (req, res, next) => {
                     GROUP BY EXTRACT(MONTH FROM o."created_at")
                     ORDER BY EXTRACT(MONTH FROM o."created_at")
                 `, {
-                    replacements: { startDate: startOfYear, endDate: endOfYear },
+                    replacements: {
+                        startDate: startOfYear,
+                        endDate: endOfYear
+                    },
                     type: sequelize.QueryTypes.SELECT
                 });
 
@@ -427,28 +447,41 @@ const getDashboardData = async (req, res, next) => {
             // Latest bookings
             (async () => {
                 const bookings = await Ticket.findAll({
-                    attributes: ['id', 'price', 'ticket_status'],
-                    include: [
-                        {
+                    attributes: ['id', 'price', 'ticket_status', 'createdAt'],
+                    include: [{
                             model: Order,
                             as: 'order',
                             attributes: ['id', 'booking_code', 'status'],
-                            where: { 
+                            where: {
                                 status: 'SUCCESS',
-                                created_at: { [Op.between]: [startOfYear, endOfYear] }
+                                createdAt: {
+                                    [Op.between]: [startOfYear, endOfYear]
+                                }
                             },
                             required: true,
-                            include: [{ model: User, as: 'user', attributes: ['full_name'], required: true }]
+                            include: [{
+                                model: User,
+                                as: 'user',
+                                attributes: ['full_name'],
+                                required: true
+                            }]
                         },
                         {
                             model: Showtime,
                             as: 'showtime',
                             attributes: ['base_price'],
                             required: true,
-                            include: [{ model: Movie, as: 'movie', attributes: ['title'], required: true }]
+                            include: [{
+                                model: Movie,
+                                as: 'movie',
+                                attributes: ['title'],
+                                required: true
+                            }]
                         }
                     ],
-                    order: [['created_at', 'DESC']],
+                    order: [
+                        ['createdAt', 'DESC']
+                    ],
                     limit: 10,
                     subQuery: false
                 });
@@ -458,8 +491,8 @@ const getDashboardData = async (req, res, next) => {
                     bookingCode: ticket.order.booking_code,
                     customerName: ticket.order.user.full_name,
                     movieTitle: ticket.showtime.movie.title,
-                    time: new Date(ticket.created_at).toLocaleTimeString('vi-VN', { 
-                        hour: '2-digit', 
+                    time: new Date(ticket.created_at).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
                         minute: '2-digit'
                     }),
                     status: 'Thành công'
@@ -485,7 +518,10 @@ const getDashboardData = async (req, res, next) => {
                     ORDER BY revenue DESC
                     LIMIT 5
                 `, {
-                    replacements: { startDate: startOfYear, endDate: endOfYear },
+                    replacements: {
+                        startDate: startOfYear,
+                        endDate: endOfYear
+                    },
                     type: sequelize.QueryTypes.SELECT
                 });
 
@@ -517,7 +553,10 @@ const getDashboardData = async (req, res, next) => {
                     ORDER BY total_bookings DESC
                     LIMIT 5
                 `, {
-                    replacements: { startDate: startOfYear, endDate: endOfYear },
+                    replacements: {
+                        startDate: startOfYear,
+                        endDate: endOfYear
+                    },
                     type: sequelize.QueryTypes.SELECT
                 });
 
@@ -556,7 +595,7 @@ const getDashboardData = async (req, res, next) => {
  */
 function getSafeImageUrl(urlsData) {
     if (!urlsData) return null;
-    
+
     try {
         // Nếu là string
         if (typeof urlsData === 'string') {

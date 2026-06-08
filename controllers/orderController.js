@@ -1089,7 +1089,8 @@ const getSystemCheckinHistory = async (req, res, next) => {
                 tickets: tickets.map(t => ({
                     qr_code: t.qr_code,
                     seat: t.seat ? `${t.seat.row_label}${t.seat.number}` : null,
-                    ticket_status: t.ticket_status
+                    ticket_status: t.ticket_status,
+                    updated_at: t.updated_at
                 }))
             };
         });

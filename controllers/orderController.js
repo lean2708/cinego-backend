@@ -1008,7 +1008,7 @@ const getSystemCheckinHistory = async (req, res, next) => {
                     as: 'tickets',
                     where: ticketWhere,
                     required: false,
-                    attributes: ['qr_code', 'ticket_status'],
+                    attributes: ['qr_code', 'ticket_status', 'updated_at'],
                     include: [
                         {
                             model: Showtime,

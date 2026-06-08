@@ -195,7 +195,7 @@ const getLatestBookings = async (req, res, next) => {
         const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
         const latestBookings = await Ticket.findAll({
-            attributes: ['id', 'price', 'ticket_status'],
+            attributes: ['id', 'price', 'ticket_status', 'created_at'],
             include: [
                 {
                     model: Order,

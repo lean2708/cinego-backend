@@ -14,6 +14,7 @@ const initializeAssociations = require('./models/associations');
 const { startOrderTimeoutJob } = require('./cron/orderTimeout');
 const initSeatExpiryListener = require('./redis/seatExpiryListener');
 const redisClient = require('./config/redis');
+const { startSeatCleanupJob } = require('./redis/seatCleanup');
 const app = express();
 const PORT = process.env.PORT || 8080;
 const server = http.createServer(app);
@@ -50,7 +51,7 @@ server.listen(PORT, async () => {
       console.log("🟢 Redis is fully ready with 'Ex' configuration.");
       initializeSocket(io);
       initSeatExpiryListener(io, redisClient);
-
+      startSeatCleanupJob(io);
       console.log("🚀 SERVER IS FULLY READY TO HANDLE REQUESTS !");
     });
 

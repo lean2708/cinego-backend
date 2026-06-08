@@ -491,7 +491,7 @@ const getDashboardData = async (req, res, next) => {
                     bookingCode: ticket.order.booking_code,
                     customerName: ticket.order.user.full_name,
                     movieTitle: ticket.showtime.movie.title,
-                    time: new Date(ticket.created_at).toLocaleTimeString('vi-VN', {
+                    time: new Date(ticket.createdAt).toLocaleTimeString('vi-VN', {
                         hour: '2-digit',
                         minute: '2-digit'
                     }),

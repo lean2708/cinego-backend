@@ -307,6 +307,18 @@ function generateOtp() {
 }
 
 
+const ping = async (req, res, next) => {
+    try {
+        return res.status(200).json({
+            success: true,
+            message: "pong",
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 module.exports = {
     register,
@@ -315,5 +327,6 @@ module.exports = {
     verifyOtp,
     resetPassword,
     getMyProfile,
-    changePassword
+    changePassword,
+    ping
 }

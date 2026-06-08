@@ -15,48 +15,46 @@ const startSeatCleanupJob = (io) => {
                     hold_expired_at: {
                         [Op.lt]: now // Thời gian hết hạn < Thời gian hiện tại
                     }
-                }
+                },
+                raw: true // Lấy dữ liệu thuần giúp tăng tốc xử lý truy vấn
             });
 
-            if (stuckSeats.length === 0) return; // Không có ghế kẹt thì thôi
+            if (stuckSeats.length === 0) return; // Không có ghế kẹt thì dừng lại luôn
 
-            // 2. Gom nhóm ghế theo suất chiếu để dễ bắn socket
-            const showtimeMap = {};
-            const stuckSeatIds = [];
+            // 2. Gom danh sách ID của các bản ghi cần update
+            const stuckSeatIds = stuckSeats.map(seat => seat.id);
 
-            stuckSeats.forEach(seat => {
-                stuckSeatIds.push(seat.id); // Lưu ID để update DB
-                if (!showtimeMap[seat.showtime_id]) {
-                    showtimeMap[seat.showtime_id] = [];
-                }
-                showtimeMap[seat.showtime_id].push(seat.seat_id);
-            });
-
-            // 3. Update toàn bộ ghế kẹt về AVAILABLE trong 1 câu query duy nhất
+            // 3. Update hàng loạt trạng thái ghế kẹt về AVAILABLE trong 1 câu lệnh duy nhất (Tối ưu DB)
             await ShowtimeSeat.update(
-                { status: 'AVAILABLE', hold_expired_at: null },
+                { 
+                    status: 'AVAILABLE', 
+                    hold_expired_at: null 
+                },
                 { 
                     where: {
-                        status: 'HOLDING',
-                        hold_expired_at: { [Op.lt]: now }
+                        id: { [Op.in]: stuckSeatIds }
                     }
                 }
             );
 
-            // 4. Bắn Socket cho các phòng (room) có ghế vừa được dọn
-            for (const [showtimeId, seats] of Object.entries(showtimeMap)) {
-                seats.forEach(seatId => {
-                    io.to(`showtime_${showtimeId}`).emit('seatReleased', { seatId });
-                    console.log(`🧹 CRON VÉT ĐÁY: Đã dọn ghế kẹt ${seatId} của suất chiếu ${showtimeId}`);
-                });
-            }
+            // 4. DUYỆT MẢNG VÀ PHÁT SỰ KIỆN ĐƠN (Giữ nguyên cấu trúc `seatReleased`)
+            stuckSeats.forEach(seat => {
+                // Ép kiểu ID sang số an toàn phòng hờ lỗi String/Number
+                const showtimeId = Number(seat.showtime_id);
+                const seatId = Number(seat.seat_id);
+
+                // Bắn socket đơn lẻ về cho phòng cụ thể như cũ
+                io.to(`showtime_${showtimeId}`).emit('seatReleased', { seatId });
+                
+                console.log(`🧹 [CRON VÉT ĐÁY]: Đã giải phóng ghế đơn lẻ ${seatId} thuộc suất chiếu ${showtimeId}`);
+            });
 
         } catch (error) {
-            console.error("❌ Lỗi khi chạy Cron dọn ghế kẹt:", error);
+            console.error("❌ [CRON JOB ERROR]: Thất bại khi dọn dẹp dữ liệu ghế kẹt:", error);
         }
     });
 
-    console.log("⏳ Cronjob: Seat Cleanup (Vét đáy ghế kẹt) đã khởi động!");
+    console.log("⏳ Cronjob: Seat Cleanup (Giữ nguyên sự kiện đơn lẻ) đã khởi động!");
 };
 
 module.exports = { startSeatCleanupJob };

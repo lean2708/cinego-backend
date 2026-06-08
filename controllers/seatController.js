@@ -116,11 +116,27 @@ const getSeatMapByShowtime = async (req, res, next) => {
 
         const showtime = await Showtime.findOne({ where: { id: showtime_id, is_deleted: false } });
         if (!showtime) throw new AppError(404, "Showtime not found");
-
+        await ShowtimeSeat.update(
+            { 
+                status: "AVAILABLE", 
+                hold_expired_at: null 
+            },
+            {
+                where: {
+                    showtime_id: Number(showtime_id),
+                    status: "HOLDING",
+                    hold_expired_at: {
+                        [Op.lt]: new Date()
+                    }
+                }
+            }
+        );
         const seats = await Seat.findAll({ where: { room_id: showtime.room_id, is_deleted: false }, raw: true });
         const showtimeSeats = await ShowtimeSeat.findAll({ where: { showtime_id }, raw: true });
+        
         const seatStatusMap = {};
         showtimeSeats.forEach(s => { seatStatusMap[s.seat_id] = s.status; });
+        
         const map = {};
         seats.forEach(seat => {
             if (!map[seat.row_label]) map[seat.row_label] = [];
@@ -131,10 +147,13 @@ const getSeatMapByShowtime = async (req, res, next) => {
                 status: seatStatusMap[seat.id] || "AVAILABLE"
             });
         });
+        
         Object.values(map).forEach(row => row.sort((a, b) => a.number - b.number));
 
         return res.status(200).json({ success: true, data: map });
-    } catch (e) { next(e); }
+    } catch (e) { 
+        next(e); 
+    }
 };
 
 module.exports = { importSeatsFromExcel, createSeat, updateSeatById, deleteSeatById, getAllSeats, getSeatById, getSeatMapByShowtime };

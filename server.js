@@ -14,47 +14,29 @@ const initializeAssociations = require('./models/associations');
 const { startOrderTimeoutJob } = require('./cron/orderTimeout');
 const initSeatExpiryListener = require('./redis/seatExpiryListener');
 const redisClient = require('./config/redis');
-
-
 const app = express();
-
 const PORT = process.env.PORT || 8080;
-
 const server = http.createServer(app);
-
 const io = new Server(server, {
     cors: {
         origin: '*', 
         methods: ['GET', 'POST']
     }
 });
-
 app.use(express.json());
-
 app.use(cors({
     origin: '*', 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 app.use(rootRouter);
 app.use(errorHandler);
-
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpecs);
 });
-
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-
-
 initializeAssociations();
-
-initializeSocket(io);
-
-initSeatExpiryListener(io, redisClient);
-
-
 server.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 
@@ -62,14 +44,17 @@ server.listen(PORT, async () => {
     await sequelize.authenticate();
     console.log('Database connection has been established successfully.');
     await sequelize.sync({ alter: true });
-
     await createDefaultAdmin();
-
     startOrderTimeoutJob();
+    redisClient.on("ready", () => {
+      console.log("🟢 Redis is fully ready with 'Ex' configuration.");
+      initializeSocket(io);
+      initSeatExpiryListener(io, redisClient);
 
-    console.log("SERVER IS READY TO HANDLE REQUESTS !");
+      console.log("🚀 SERVER IS FULLY READY TO HANDLE REQUESTS !");
+    });
 
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('Unable to connect to the database or Redis:', error);
   }
 });

@@ -195,7 +195,7 @@ const getLatestBookings = async (req, res, next) => {
         const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
         const latestBookings = await Ticket.findAll({
-            attributes: ['id', 'price', 'ticket_status', 'created_at'],
+            attributes: ['id', 'price', 'ticket_status', 'createdAt'], 
             include: [
                 {
                     model: Order,
@@ -203,7 +203,7 @@ const getLatestBookings = async (req, res, next) => {
                     attributes: ['id', 'booking_code', 'status'],
                     where: { 
                         status: 'SUCCESS',
-                        created_at: { [Op.between]: [startOfYear, endOfYear] }
+                        createdAt: { [Op.between]: [startOfYear, endOfYear] } 
                     },
                     required: true,
                     include: [
@@ -230,7 +230,7 @@ const getLatestBookings = async (req, res, next) => {
                     ]
                 }
             ],
-            order: [['created_at', 'DESC']],
+            order: [['createdAt', 'DESC']], 
             limit,
             subQuery: false
         });
@@ -240,8 +240,8 @@ const getLatestBookings = async (req, res, next) => {
             bookingCode: ticket.order.booking_code,
             customerName: ticket.order.user.full_name,
             movieTitle: ticket.showtime.movie.title,
-            time: new Date(ticket.created_at).toLocaleTimeString('vi-VN'),
-            date: new Date(ticket.created_at).toLocaleDateString('vi-VN'),
+            time: new Date(ticket.createdAt).toLocaleTimeString('vi-VN'),
+            date: new Date(ticket.createdAt).toLocaleDateString('vi-VN'),
             status: ticket.order.status === 'SUCCESS' ? 'Thành công' : 'Chưa thanh toán',
             statusType: ticket.order.status === 'SUCCESS' ? 'success' : 'pending'
         }));

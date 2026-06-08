@@ -96,7 +96,7 @@ const getAllVouchersForAdmin = async (req, res, next) => {
     const { count, rows } = await Voucher.findAndCountAll({
       limit: pageSize,
       offset : offset,
-      order: [["created_at", "DESC"]]
+      order: [['created_at', 'DESC'], ['id', 'DESC']]
     });
 
     console.log("Get all vouchers successfully");

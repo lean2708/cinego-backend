@@ -10,7 +10,7 @@ const getAllGenres = async (req, res, next) => {
 
         const { count, rows } = await Genre.findAndCountAll({
             where: { is_deleted: false },
-            order: [['name', 'ASC']],
+            order: [['name', 'ASC'], ['id', 'DESC']],
             limit: pageSize,
             offset
         });

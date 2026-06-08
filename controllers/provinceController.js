@@ -90,7 +90,7 @@ const getAllProvinces = async (req, res, next) => {
 
         const { count, rows } = await province.findAndCountAll({
             where: { is_deleted: false },
-            order: [['name', 'ASC']],
+            order: [['name', 'ASC'], ['id', 'DESC']],
             limit: pageSize,
             offset
         });

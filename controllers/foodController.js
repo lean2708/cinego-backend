@@ -99,7 +99,7 @@ const getAllFoodsForAdmin = async (req, res, next) => {
         const { count, rows } = await Food.findAndCountAll({
             limit: pageSize,
             offset: offset,
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC'], ['id', 'DESC']]
         });
 
         console.log("Get all foods successfully");

@@ -102,7 +102,7 @@ const getAllUsers = async (req, res, next) => {
             limit: pageSize,
             offset: offset,
             attributes: { exclude: ['password_hash'] },
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC'], ['id', 'DESC']]
         });
 
         console.log("Get all users with pageNo:" + pageNo + " pageSize:" + pageSize + " successfully");

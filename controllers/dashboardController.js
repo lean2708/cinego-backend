@@ -1,7 +1,5 @@
 const sequelize = require('../config/database');
-const {
-    Op
-} = require('sequelize');
+const { Op } = require('sequelize');
 const Order = require('../models/Order');
 const Ticket = require('../models/Ticket');
 const OrderFood = require('../models/OrderFood');
@@ -14,75 +12,56 @@ const AppError = require('../utils/appError');
 // 1. Get summary statistics
 const getSummaryStats = async (req, res, next) => {
     try {
-        // Lấy năm hiện tại hoặc từ query
         const year = Math.max(1900, Math.min(parseInt(req.query.year) || new Date().getFullYear(), 2100));
-        // Sử dụng UTC cho cả startOfYear và endOfYear để tránh timezone issues
         const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
         const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
-        // 1. Tính tổng doanh thu vé
         const ticketRevenue = await Order.sum('ticket_total', {
             where: {
                 status: 'SUCCESS',
-                created_at: {
-                    [Op.between]: [startOfYear, endOfYear]
-                }
+                created_at: { [Op.between]: [startOfYear, endOfYear] }
             }
         }) || 0;
 
-        // 2. Tính tổng doanh thu F&B
         const foodRevenue = await Order.sum('food_total', {
             where: {
                 status: 'SUCCESS',
-                created_at: {
-                    [Op.between]: [startOfYear, endOfYear]
-                }
+                created_at: { [Op.between]: [startOfYear, endOfYear] }
             }
         }) || 0;
 
-        // 3. Đếm tổng vé bán ra
         const totalTicketsSold = await Ticket.count({
             include: [{
                 model: Order,
                 as: 'order',
                 where: {
                     status: 'SUCCESS',
-                    created_at: {
-                        [Op.between]: [startOfYear, endOfYear]
-                    }
+                    created_at: { [Op.between]: [startOfYear, endOfYear] }
                 },
                 required: true
             }]
         });
 
-        // 4. Đếm người dùng mới trong năm
         const newUsers = await User.count({
             where: {
-                created_at: {
-                    [Op.between]: [startOfYear, endOfYear]
-                }
+                created_at: { [Op.between]: [startOfYear, endOfYear] }
             }
         });
 
-        // 5. Tính % thay đổi so với năm trước
         const prevStartOfYear = new Date(`${year - 1}-01-01`);
         const prevEndOfYear = new Date(`${year - 1}-12-31T23:59:59.999Z`);
 
         const prevTicketRevenue = await Order.sum('ticket_total', {
             where: {
                 status: 'SUCCESS',
-                created_at: {
-                    [Op.between]: [prevStartOfYear, prevEndOfYear]
-                }
+                created_at: { [Op.between]: [prevStartOfYear, prevEndOfYear] }
             }
         }) || 0;
 
         const prevFoodRevenue = await Order.sum('food_total', {
             where: {
                 status: 'SUCCESS',
-                created_at: {
-                    [Op.between]: [prevStartOfYear, prevEndOfYear]
-                }
+                created_at: { [Op.between]: [prevStartOfYear, prevEndOfYear] }
             }
         }) || 0;
 
@@ -92,9 +71,7 @@ const getSummaryStats = async (req, res, next) => {
                 as: 'order',
                 where: {
                     status: 'SUCCESS',
-                    created_at: {
-                        [Op.between]: [prevStartOfYear, prevEndOfYear]
-                    }
+                    created_at: { [Op.between]: [prevStartOfYear, prevEndOfYear] }
                 },
                 required: true
             }]
@@ -102,13 +79,10 @@ const getSummaryStats = async (req, res, next) => {
 
         const prevNewUsers = await User.count({
             where: {
-                created_at: {
-                    [Op.between]: [prevStartOfYear, prevEndOfYear]
-                }
+                created_at: { [Op.between]: [prevStartOfYear, prevEndOfYear] }
             }
         });
 
-        // Tính % thay đổi
         const ticketRevenueChange = prevTicketRevenue > 0 ?
             ((ticketRevenue - prevTicketRevenue) / prevTicketRevenue * 100).toFixed(2) :
             (ticketRevenue > 0 ? "100.00" : "0.00");
@@ -163,13 +137,10 @@ const getMonthlyRevenueChart = async (req, res, next) => {
             GROUP BY EXTRACT(MONTH FROM o."created_at")
             ORDER BY EXTRACT(MONTH FROM o."created_at")
         `, {
-            replacements: {
-                year
-            },
+            replacements: { year },
             type: sequelize.QueryTypes.SELECT
         });
 
-        // Fill in missing months with 0
         const chartData = Array(12).fill(0);
         monthlyData.forEach(data => {
             chartData[data.month - 1] = Math.round(data.revenue) || 0;
@@ -199,16 +170,14 @@ const getLatestBookings = async (req, res, next) => {
         const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
         const latestBookings = await Ticket.findAll({
-            attributes: ['id', 'price', 'ticket_status', 'createdAt'],
+            attributes: ['id', 'price', 'ticket_status', 'created_at'], // Đổi thành created_at
             include: [{
                     model: Order,
                     as: 'order',
                     attributes: ['id', 'booking_code', 'status'],
                     where: {
                         status: 'SUCCESS',
-                        createdAt: {
-                            [Op.between]: [startOfYear, endOfYear]
-                        }
+                        created_at: { [Op.between]: [startOfYear, endOfYear] } // Đổi thành created_at
                     },
                     required: true,
                     include: [{
@@ -232,7 +201,7 @@ const getLatestBookings = async (req, res, next) => {
                 }
             ],
             order: [
-                ['createdAt', 'DESC']
+                ['created_at', 'DESC'] // Đổi thành created_at
             ],
             limit,
             subQuery: false
@@ -243,8 +212,8 @@ const getLatestBookings = async (req, res, next) => {
             bookingCode: ticket.order.booking_code,
             customerName: ticket.order.user.full_name,
             movieTitle: ticket.showtime.movie.title,
-            time: new Date(ticket.createdAt).toLocaleTimeString('vi-VN'),
-            date: new Date(ticket.createdAt).toLocaleDateString('vi-VN'),
+            time: new Date(ticket.created_at).toLocaleTimeString('vi-VN'), // Đổi thành ticket.created_at
+            date: new Date(ticket.created_at).toLocaleDateString('vi-VN'), // Đổi thành ticket.created_at
             status: ticket.order.status === 'SUCCESS' ? 'Thành công' : 'Chưa thanh toán',
             statusType: ticket.order.status === 'SUCCESS' ? 'success' : 'pending'
         }));
@@ -281,10 +250,7 @@ const getTopGrossingMovies = async (req, res, next) => {
             ORDER BY revenue DESC
             LIMIT :limit
         `, {
-            replacements: {
-                year,
-                limit
-            },
+            replacements: { year, limit },
             type: sequelize.QueryTypes.SELECT
         });
 
@@ -330,10 +296,7 @@ const getTopCinemasByBookings = async (req, res, next) => {
             ORDER BY total_bookings DESC
             LIMIT :limit
         `, {
-            replacements: {
-                year,
-                limit
-            },
+            replacements: { year, limit },
             type: sequelize.QueryTypes.SELECT
         });
 
@@ -366,22 +329,17 @@ const getDashboardData = async (req, res, next) => {
         const [summaryStats, monthlyRevenue, latestBookings, topMovies, topCinemas] = await Promise.all([
             // Summary stats
             (async () => {
-
                 const ticketRevenue = await Order.sum('ticket_total', {
                     where: {
                         status: 'SUCCESS',
-                        created_at: {
-                            [Op.between]: [startOfYear, endOfYear]
-                        }
+                        created_at: { [Op.between]: [startOfYear, endOfYear] }
                     }
                 }) || 0;
 
                 const foodRevenue = await Order.sum('food_total', {
                     where: {
                         status: 'SUCCESS',
-                        created_at: {
-                            [Op.between]: [startOfYear, endOfYear]
-                        }
+                        created_at: { [Op.between]: [startOfYear, endOfYear] }
                     }
                 }) || 0;
 
@@ -391,9 +349,7 @@ const getDashboardData = async (req, res, next) => {
                         as: 'order',
                         where: {
                             status: 'SUCCESS',
-                            created_at: {
-                                [Op.between]: [startOfYear, endOfYear]
-                            }
+                            created_at: { [Op.between]: [startOfYear, endOfYear] }
                         },
                         required: true
                     }]
@@ -401,9 +357,7 @@ const getDashboardData = async (req, res, next) => {
 
                 const newUsers = await User.count({
                     where: {
-                        created_at: {
-                            [Op.between]: [startOfYear, endOfYear]
-                        }
+                        created_at: { [Op.between]: [startOfYear, endOfYear] }
                     }
                 });
 
@@ -447,16 +401,14 @@ const getDashboardData = async (req, res, next) => {
             // Latest bookings
             (async () => {
                 const bookings = await Ticket.findAll({
-                    attributes: ['id', 'price', 'ticket_status', 'createdAt'],
+                    attributes: ['id', 'price', 'ticket_status', 'created_at'], // Đổi thành created_at
                     include: [{
                             model: Order,
                             as: 'order',
                             attributes: ['id', 'booking_code', 'status'],
                             where: {
                                 status: 'SUCCESS',
-                                createdAt: {
-                                    [Op.between]: [startOfYear, endOfYear]
-                                }
+                                created_at: { [Op.between]: [startOfYear, endOfYear] } // Đổi thành created_at
                             },
                             required: true,
                             include: [{
@@ -480,7 +432,7 @@ const getDashboardData = async (req, res, next) => {
                         }
                     ],
                     order: [
-                        ['createdAt', 'DESC']
+                        ['created_at', 'DESC'] // Đổi thành created_at
                     ],
                     limit: 10,
                     subQuery: false
@@ -491,7 +443,7 @@ const getDashboardData = async (req, res, next) => {
                     bookingCode: ticket.order.booking_code,
                     customerName: ticket.order.user.full_name,
                     movieTitle: ticket.showtime.movie.title,
-                    time: new Date(ticket.createdAt).toLocaleTimeString('vi-VN', {
+                    time: new Date(ticket.created_at).toLocaleTimeString('vi-VN', { // Đổi thành ticket.created_at
                         hour: '2-digit',
                         minute: '2-digit'
                     }),
@@ -595,24 +547,18 @@ const getDashboardData = async (req, res, next) => {
  */
 function getSafeImageUrl(urlsData) {
     if (!urlsData) return null;
-
     try {
-        // Nếu là string
         if (typeof urlsData === 'string') {
-            // Thử parse như JSON array
             try {
                 const parsed = JSON.parse(urlsData);
                 return Array.isArray(parsed) ? parsed[0] : parsed;
             } catch {
-                // Nếu không phải JSON, coi như URL thường
                 return urlsData;
             }
         }
-        // Nếu là array
         if (Array.isArray(urlsData)) {
             return urlsData[0] || null;
         }
-        // Nếu là object khác, convert to string
         return String(urlsData) || null;
     } catch (error) {
         console.error('Error extracting image URL:', error);

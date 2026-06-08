@@ -1,5 +1,5 @@
 const express = require("express");
-const { register, login, forgotPassword,verifyOtp, resetPassword, getMyProfile, changePassword } = require("../controllers/authController");
+const { register, login, forgotPassword,verifyOtp, resetPassword, getMyProfile, changePassword,ping } = require("../controllers/authController");
 const { authToken } = require("../middlewares/authToken");
 
 const router = express.Router();
@@ -316,5 +316,33 @@ router.get("/myInfo", authToken, getMyProfile);
  */
 router.put("/change-password", authToken, changePassword);
 
+
+/**
+ * @swagger
+ * /auth/ping:
+ *   get:
+ *     summary: Ping API
+ *     description: Check if server is running
+ *     tags: [Auth]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Server is alive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: pong
+ *                 timestamp:
+ *                   type: string
+ *                   example: 2026-06-08T15:30:00.000Z
+ */
+router.get("/ping", ping);
 
 module.exports = router;

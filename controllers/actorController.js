@@ -69,7 +69,7 @@ const getAllActors = async (req, res, next) => {
             where: whereCondition,
             limit: pageSize,
             offset,
-            order: [['id', 'DESC']]
+            order: [['id', 'ASC']]
         });
 
         console.log("Get all actors successfully");
